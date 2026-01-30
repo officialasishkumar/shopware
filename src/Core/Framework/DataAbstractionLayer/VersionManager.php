@@ -17,6 +17,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\CascadeDelete;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Extension;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Required;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\WriteProtected;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\ListField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToManyAssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToOneAssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\OneToManyAssociationField;
@@ -269,7 +270,7 @@ class VersionManager
             }
         }
 
-        $data = array_replace_recursive($data, $behavior->getOverwrites());
+        $data = $this->mergeOverwrites($definition, $data, $behavior->getOverwrites());
 
         $versionContext = $context->createWithVersionId($versionId);
         $result = null;
@@ -888,5 +889,66 @@ class VersionManager
         );
 
         return $exists->has($versionId);
+    }
+
+    /**
+     * Merge overwrite data with cloned entity data, properly handling ListField
+     * This method recursively handles nested fields in any field type that has property mappings.
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, mixed> $overwrites
+     * @param Field[]|null $nestedFields Optional nested field definitions for recursive calls
+     *
+     * @return array<string, mixed>
+     */
+    private function mergeOverwrites(EntityDefinition $definition, array $data, array $overwrites, ?array $nestedFields = null): array
+    {
+        foreach ($overwrites as $key => $value) {
+            $field = $this->getFieldDefinition($key, $definition, $nestedFields);
+
+            // ListField should be completely replaced, not merged
+            if ($field instanceof ListField) {
+                $data[$key] = $value;
+                continue;
+            }
+
+            $isBothArrays = \is_array($value) && isset($data[$key]) && \is_array($data[$key]);
+
+            // For fields with nested property mappings, recursively handle them
+            if ($isBothArrays && $field && method_exists($field, 'getPropertyMapping')) {
+                $propertyMapping = $field->getPropertyMapping();
+                if (!empty($propertyMapping)) {
+                    $data[$key] = $this->mergeOverwrites($definition, $data[$key], $value, $propertyMapping);
+                    continue;
+                }
+            }
+
+            // For other arrays, use array_replace_recursive; otherwise assign directly
+            $data[$key] = $isBothArrays
+                ? array_replace_recursive($data[$key], $value)
+                : $value;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get field definition from nested fields or entity definition.
+     *
+     * @param Field[]|null $nestedFields
+     */
+    private function getFieldDefinition(string $key, EntityDefinition $definition, ?array $nestedFields): ?Field
+    {
+        if ($nestedFields !== null) {
+            foreach ($nestedFields as $field) {
+                if ($field->getPropertyName() === $key) {
+                    return $field;
+                }
+            }
+
+            return null;
+        }
+
+        return $definition->getFields()->get($key);
     }
 }
