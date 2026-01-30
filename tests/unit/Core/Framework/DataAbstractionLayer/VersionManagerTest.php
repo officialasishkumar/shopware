@@ -416,6 +416,21 @@ class VersionManagerTest extends TestCase
                 ],
             ],
         ];
+
+        yield 'nested field with undefined key in overwrite' => [
+            'definitionClass' => VersionManagerNestedFieldTestDefinition::class,
+            'entityName' => 'test_nested_entity',
+            'originalData' => [
+                'nestedData' => ['nested1' => 'value1', 'nested2' => 'value2'],
+            ],
+            'overwriteData' => [
+                'nestedData' => ['undefinedKey' => 'newValue', 'nested1' => 'updated'],
+            ],
+            // When a key  doesn't have a field definition in the nested fields, it should still be merged
+            'expectedData' => [
+                'nestedData' => ['nested1' => 'updated', 'nested2' => 'value2', 'undefinedKey' => 'newValue'],
+            ],
+        ];
     }
 
     /**
