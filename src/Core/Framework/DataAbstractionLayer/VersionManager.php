@@ -897,7 +897,7 @@ class VersionManager
      *
      * @param array<string, mixed> $data
      * @param array<string, mixed> $overwrites
-     * @param Field[]|null $nestedFields Optional nested field definitions for recursive calls
+     * @param list<Field>|null $nestedFields Optional nested field definitions for recursive calls
      *
      * @return array<string, mixed>
      */
@@ -912,7 +912,7 @@ class VersionManager
                 continue;
             }
 
-            $isBothArrays = \is_array($value) && isset($data[$key]) && \is_array($data[$key]);
+            $isBothArrays = \is_array($value) && \array_key_exists($key, $data) && \is_array($data[$key]);
 
             // For fields with nested property mappings, recursively handle them
             if ($isBothArrays && $field && method_exists($field, 'getPropertyMapping')) {
@@ -935,7 +935,7 @@ class VersionManager
     /**
      * Get field definition from nested fields or entity definition.
      *
-     * @param Field[]|null $nestedFields
+     * @param list<Field>|null $nestedFields
      */
     private function getFieldDefinition(string $key, EntityDefinition $definition, ?array $nestedFields): ?Field
     {
