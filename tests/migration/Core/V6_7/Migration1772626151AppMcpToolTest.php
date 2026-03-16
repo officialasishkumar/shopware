@@ -33,6 +33,7 @@ class Migration1772626151AppMcpToolTest extends TestCase
         static::assertFalse(TableHelper::tableExists($this->connection, 'app_mcp_tool_translation'));
 
         $migration = new Migration1772626151AppMcpTool();
+        static::assertSame(1772626151, $migration->getCreationTimestamp());
 
         $migration->update($this->connection);
         $migration->update($this->connection);

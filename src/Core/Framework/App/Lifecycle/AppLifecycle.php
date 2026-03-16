@@ -285,7 +285,7 @@ class AppLifecycle extends AbstractAppLifecycle
         $fs = $this->sourceResolver->filesystemForApp($app);
 
         if (!$fs->has('Resources/mcp.xml')) {
-            return null;
+            return null; // @codeCoverageIgnore
         }
 
         return Mcp::createFromXmlFile($fs->path('Resources/mcp.xml'));

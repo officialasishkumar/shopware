@@ -37,6 +37,7 @@ class Migration1773409342AppMcpPromptAndResourceTest extends TestCase
         static::assertFalse(TableHelper::tableExists($this->connection, 'app_mcp_resource_translation'));
 
         $migration = new Migration1773409342AppMcpPromptAndResource();
+        static::assertSame(1773409342, $migration->getCreationTimestamp());
 
         $migration->update($this->connection);
         $migration->update($this->connection);
