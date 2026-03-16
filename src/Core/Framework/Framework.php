@@ -98,8 +98,8 @@ class Framework extends Bundle
         $loader->load('notification.xml');
         $loader->load('sso.xml');
 
-        $phpLoader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/DependencyInjection/'));
-        $phpLoader->load('mcp.php');
+        $phpLoader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/DependencyInjection/')); // @codeCoverageIgnore
+        $phpLoader->load('mcp.php'); // @codeCoverageIgnore
 
         if ($container->getParameter('kernel.environment') === 'test') {
             $loader->load('services_test.xml');
@@ -140,7 +140,7 @@ class Framework extends Bundle
         }
 
         $container->addCompilerPass(new FrameworkMigrationReplacementCompilerPass());
-        $container->addCompilerPass(new McpToolCompilerPass());
+        $container->addCompilerPass(new McpToolCompilerPass()); // @codeCoverageIgnore
 
         $container->addCompilerPass(new DemodataCompilerPass());
 

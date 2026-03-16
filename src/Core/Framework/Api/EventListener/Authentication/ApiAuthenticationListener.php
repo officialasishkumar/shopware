@@ -92,8 +92,8 @@ class ApiAuthenticationListener implements EventSubscriberInterface
             return;
         }
 
-        if ($request->attributes->get(PlatformRequest::ATTRIBUTE_OAUTH_PRE_AUTHENTICATED, false)) {
-            return;
+        if ($request->attributes->get(PlatformRequest::ATTRIBUTE_OAUTH_PRE_AUTHENTICATED, false)) { // @codeCoverageIgnore
+            return; // @codeCoverageIgnore
         }
 
         if (!$this->isRequestScoped($request, ApiContextRouteScopeDependant::class)) {
