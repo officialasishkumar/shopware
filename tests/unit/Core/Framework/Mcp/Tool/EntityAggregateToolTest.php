@@ -87,7 +87,7 @@ class EntityAggregateToolTest extends TestCase
         static::assertArrayNotHasKey('apiAlias', $data['data']['aggregations']['myAvg']);
     }
 
-    public function testCriteriaBuilderReceivesLimitZeroAndAggregations(): void
+    public function testCriteriaBuilderReceivesAggregationsAndSearchUsesLimitZero(): void
     {
         $context = Context::createDefaultContext();
         $definition = $this->createMock(EntityDefinition::class);
@@ -102,10 +102,14 @@ class EntityAggregateToolTest extends TestCase
                 return new Criteria();
             });
 
+        $capturedCriteria = null;
         $repository = $this->createMock(EntityRepository::class);
-        $repository->method('search')->willReturn(
-            new EntitySearchResult('order', 0, new EntityCollection(), null, new Criteria(), $context)
-        );
+        $repository->method('search')
+            ->willReturnCallback(function (Criteria $criteria) use (&$capturedCriteria, $context): EntitySearchResult {
+                $capturedCriteria = $criteria;
+
+                return new EntitySearchResult('order', 0, new EntityCollection(), null, new Criteria(), $context);
+            });
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
         $registry->method('getByEntityName')->willReturn($definition);
@@ -118,8 +122,11 @@ class EntityAggregateToolTest extends TestCase
         ($tool)('order', '[{"type":"count","name":"total","field":"id"}]');
 
         static::assertIsArray($capturedPayload);
-        static::assertSame(0, $capturedPayload['limit']);
+        static::assertArrayNotHasKey('limit', $capturedPayload);
         static::assertCount(1, $capturedPayload['aggregations']);
+
+        static::assertInstanceOf(Criteria::class, $capturedCriteria);
+        static::assertSame(0, $capturedCriteria->getLimit());
     }
 
     public function testFiltersArePassedToCriteria(): void

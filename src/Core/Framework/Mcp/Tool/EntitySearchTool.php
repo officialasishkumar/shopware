@@ -45,6 +45,7 @@ class EntitySearchTool
         $payload = json_decode($criteria, true, 512, \JSON_THROW_ON_ERROR);
 
         $payload['limit'] ??= $limit;
+        $payload['total-count-mode'] ??= Criteria::TOTAL_COUNT_MODE_EXACT;
         if ($page > 1) {
             $payload['page'] = $page;
         }

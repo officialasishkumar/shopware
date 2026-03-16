@@ -33,6 +33,8 @@ use Shopware\Core\Content\Property\Aggregate\PropertyGroupOptionTranslation\Prop
 use Shopware\Core\Content\Property\Aggregate\PropertyGroupTranslation\PropertyGroupTranslationCollection;
 use Shopware\Core\Content\Seo\SeoUrl\SeoUrlCollection;
 use Shopware\Core\Framework\App\Aggregate\ActionButtonTranslation\ActionButtonTranslationCollection;
+use Shopware\Core\Framework\App\Aggregate\AppMcpPromptTranslation\AppMcpPromptTranslationCollection;
+use Shopware\Core\Framework\App\Aggregate\AppMcpResourceTranslation\AppMcpResourceTranslationCollection;
 use Shopware\Core\Framework\App\Aggregate\AppMcpToolTranslation\AppMcpToolTranslationCollection;
 use Shopware\Core\Framework\App\Aggregate\AppScriptConditionTranslation\AppScriptConditionTranslationCollection;
 use Shopware\Core\Framework\App\Aggregate\AppTranslation\AppTranslationCollection;
@@ -199,6 +201,10 @@ class LanguageEntity extends Entity
     protected ?AppScriptConditionTranslationCollection $appScriptConditionTranslations = null;
 
     protected ?AppMcpToolTranslationCollection $appMcpToolTranslations = null;
+
+    protected ?AppMcpPromptTranslationCollection $appMcpPromptTranslations = null;
+
+    protected ?AppMcpResourceTranslationCollection $appMcpResourceTranslations = null;
 
     protected ?AppFlowActionTranslationCollection $appFlowActionTranslations = null;
 
@@ -846,6 +852,26 @@ class LanguageEntity extends Entity
     public function setAppMcpToolTranslations(AppMcpToolTranslationCollection $appMcpToolTranslations): void
     {
         $this->appMcpToolTranslations = $appMcpToolTranslations;
+    }
+
+    public function getAppMcpPromptTranslations(): ?AppMcpPromptTranslationCollection
+    {
+        return $this->appMcpPromptTranslations;
+    }
+
+    public function setAppMcpPromptTranslations(AppMcpPromptTranslationCollection $appMcpPromptTranslations): void
+    {
+        $this->appMcpPromptTranslations = $appMcpPromptTranslations;
+    }
+
+    public function getAppMcpResourceTranslations(): ?AppMcpResourceTranslationCollection
+    {
+        return $this->appMcpResourceTranslations;
+    }
+
+    public function setAppMcpResourceTranslations(AppMcpResourceTranslationCollection $appMcpResourceTranslations): void
+    {
+        $this->appMcpResourceTranslations = $appMcpResourceTranslations;
     }
 
     public function getAppFlowActionTranslations(): ?AppFlowActionTranslationCollection

@@ -40,6 +40,24 @@ Rules:
 - The trait includes a response size guard (100 KB) that truncates oversized responses
 - A `McpToolResponseConventionTest` enforces that all `#[McpTool]` classes use the trait
 
+## Pagination with shopware-entity-search
+
+`EntitySearchTool` exposes `limit` (default 25) and `page` (default 1) as top-level parameters alongside the criteria JSON. Every response includes a `_meta` block:
+
+```json
+{ "success": true, "data": [...], "_meta": { "total": 1482, "page": 1, "limit": 25 } }
+```
+
+To iterate through all results, increment `page` until `page * limit >= total`:
+
+- Page 1: `page=1` → records 1–25
+- Page 2: `page=2` → records 26–50
+- Total pages: `ceil(_meta.total / _meta.limit)`
+
+You can also set `limit` inside the criteria JSON string directly — the parameter only applies when the criteria does not already contain a `limit` key (`??=`).
+
+**Count mode:** The tool defaults to `total-count-mode: exact`, which runs a separate `COUNT(*)` query so `_meta.total` always reflects the real dataset size. You can override this in the criteria JSON to `next-pages` (faster — fetches `limit * 6 + 1` rows to detect if a next page exists, but total is not meaningful) or `none` (no count query at all — fastest, but `_meta.total` only reflects the current page size).
+
 ## Search vs. aggregate: why they are separate tools
 
 `EntitySearchTool` and `EntityAggregateTool` look similar but serve different purposes and have different output sizes:

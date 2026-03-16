@@ -253,6 +253,88 @@ class EntitySearchToolTest extends TestCase
         ($tool)('product', '{"limit": 50}');
     }
 
+    public function testDefaultsTotalCountModeToExact(): void
+    {
+        $context = Context::createDefaultContext();
+        $definition = $this->createMock(EntityDefinition::class);
+
+        $criteria = new Criteria();
+        $criteria->setLimit(25);
+        $criteria->setIncludes([]);
+
+        $result = new EntitySearchResult('product', 0, new EntityCollection(), null, $criteria, $context);
+
+        $repository = $this->createMock(EntityRepository::class);
+        $repository->method('search')->willReturn($result);
+
+        $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('getByEntityName')->willReturn($definition);
+        $registry->method('getRepository')->willReturn($repository);
+
+        $capturedPayload = null;
+        $criteriaBuilder = $this->createMock(RequestCriteriaBuilder::class);
+        $criteriaBuilder->expects($this->once())
+            ->method('fromArray')
+            ->willReturnCallback(function (array $payload) use (&$capturedPayload, $criteria): Criteria {
+                $capturedPayload = $payload;
+
+                return $criteria;
+            });
+
+        $encoder = $this->createMock(JsonEntityEncoder::class);
+        $encoder->method('encode')->willReturn([]);
+
+        $contextProvider = $this->createMock(McpContextProvider::class);
+        $contextProvider->method('getContext')->willReturn($context);
+
+        $tool = new EntitySearchTool($registry, $criteriaBuilder, $contextProvider, $encoder);
+        ($tool)('product');
+
+        static::assertIsArray($capturedPayload);
+        static::assertSame(Criteria::TOTAL_COUNT_MODE_EXACT, $capturedPayload['total-count-mode']);
+    }
+
+    public function testCallerCanOverrideTotalCountMode(): void
+    {
+        $context = Context::createDefaultContext();
+        $definition = $this->createMock(EntityDefinition::class);
+
+        $criteria = new Criteria();
+        $criteria->setLimit(25);
+        $criteria->setIncludes([]);
+
+        $result = new EntitySearchResult('product', 0, new EntityCollection(), null, $criteria, $context);
+
+        $repository = $this->createMock(EntityRepository::class);
+        $repository->method('search')->willReturn($result);
+
+        $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('getByEntityName')->willReturn($definition);
+        $registry->method('getRepository')->willReturn($repository);
+
+        $capturedPayload = null;
+        $criteriaBuilder = $this->createMock(RequestCriteriaBuilder::class);
+        $criteriaBuilder->expects($this->once())
+            ->method('fromArray')
+            ->willReturnCallback(function (array $payload) use (&$capturedPayload, $criteria): Criteria {
+                $capturedPayload = $payload;
+
+                return $criteria;
+            });
+
+        $encoder = $this->createMock(JsonEntityEncoder::class);
+        $encoder->method('encode')->willReturn([]);
+
+        $contextProvider = $this->createMock(McpContextProvider::class);
+        $contextProvider->method('getContext')->willReturn($context);
+
+        $tool = new EntitySearchTool($registry, $criteriaBuilder, $contextProvider, $encoder);
+        ($tool)('product', '{"total-count-mode": 0}');
+
+        static::assertIsArray($capturedPayload);
+        static::assertSame(Criteria::TOTAL_COUNT_MODE_NONE, $capturedPayload['total-count-mode']);
+    }
+
     public function testDeniesAccessWithoutReadPermission(): void
     {
         $source = new AdminApiSource(null, null);
