@@ -379,7 +379,7 @@ class VersionManager
                 }
 
                 $nested = array_filter($nested);
-                if (empty($nested)) {
+                if ($nested === []) {
                     continue;
                 }
 
@@ -395,7 +395,7 @@ class VersionManager
                     $nested[] = ['id' => $item['id']];
                 }
 
-                if (empty($nested)) {
+                if ($nested === []) {
                     continue;
                 }
 
@@ -417,8 +417,8 @@ class VersionManager
             }
         }
 
-        /** @phpstan-ignore empty.variable (might be overridden by reference) */
-        if (!empty($extensions)) {
+        /** @phpstan-ignore notIdentical.alwaysFalse (might be overridden by reference) */
+        if ($extensions !== []) {
             $payload['extensions'] = $extensions;
         }
 
@@ -531,7 +531,7 @@ class VersionManager
      */
     private function addVersionToPayload(array $payload, EntityDefinition $definition, string $versionId): array
     {
-        $fields = $definition->getFields()->filter(fn (Field $field) => $field instanceof VersionField || $field instanceof ReferenceVersionField);
+        $fields = $definition->getFields()->filter(static fn (Field $field) => $field instanceof VersionField || $field instanceof ReferenceVersionField);
 
         foreach ($fields as $field) {
             $payload[$field->getPropertyName()] = $versionId;
@@ -578,7 +578,7 @@ class VersionManager
         int $childCounter = 1
     ): void {
         // add all cascade delete associations
-        $cascades = $definition->getFields()->filter(function (Field $field) {
+        $cascades = $definition->getFields()->filter(static function (Field $field) {
             $flag = $field->getFlag(CascadeDelete::class);
 
             return $flag ? $flag->isCloneRelevant() : false;
@@ -761,7 +761,7 @@ class VersionManager
                         }
 
                         $payload = $data->getPayload();
-                        if (empty($payload)) {
+                        if ($payload === null || $payload === []) {
                             break;
                         }
                         $payload = $this->addVersionToPayload($payload, $definition, Defaults::LIVE_VERSION);
@@ -802,7 +802,7 @@ class VersionManager
             $operations[] = new SyncOperation('delete-' . $entity, $entity, 'delete', $payload);
         }
 
-        if (empty($operations)) {
+        if ($operations === []) {
             return new WriteResult([], [], []);
         }
 

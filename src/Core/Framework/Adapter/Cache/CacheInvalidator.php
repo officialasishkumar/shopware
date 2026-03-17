@@ -53,7 +53,7 @@ class CacheInvalidator
     {
         $tags = array_filter(array_unique($tags));
 
-        if (empty($tags)) {
+        if ($tags === []) {
             return;
         }
 
@@ -86,7 +86,7 @@ class CacheInvalidator
     {
         $tags = $this->cache->loadAndDelete();
 
-        if (empty($tags)) {
+        if ($tags === []) {
             return $tags;
         }
 
@@ -128,7 +128,7 @@ class CacheInvalidator
 
         if ($this->tagInvalidationLogEnabled) {
             $callerFrame = $this->backtraceCollector->getFirstFrame(
-                fn (array $frame) => !isset($frame['class'], $frame['function'])
+                static fn (array $frame) => !isset($frame['class'], $frame['function'])
                     || $frame['class'] === self::class
             );
 
