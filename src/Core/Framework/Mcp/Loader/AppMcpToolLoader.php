@@ -83,42 +83,17 @@ class AppMcpToolLoader implements LoaderInterface
                 t.input_schema,
                 a.name AS app_name,
                 a.app_secret,
-                COALESCE(tt_locale.label, tt_default.label) AS label,
-                COALESCE(tt_locale.description, tt_default.description) AS description
+                tt.label,
+                tt.description
             FROM app_mcp_tool t
             INNER JOIN app a ON t.app_id = a.id AND a.active = 1
-            LEFT JOIN app_mcp_tool_translation tt_locale
-                ON t.id = tt_locale.app_mcp_tool_id
-                AND tt_locale.language_id = (
-                    SELECT l.id FROM `language` l
-                    INNER JOIN locale lo ON l.locale_id = lo.id AND lo.code = :locale
-                    LIMIT 1
-                )
-            LEFT JOIN app_mcp_tool_translation tt_default
-                ON t.id = tt_default.app_mcp_tool_id
-                AND tt_default.language_id = (
-                    SELECT l2.id FROM `language` l2
-                    INNER JOIN locale lo2 ON l2.locale_id = lo2.id AND lo2.code = :fallback
-                    LIMIT 1
-                )
+            LEFT JOIN app_mcp_tool_translation tt
+                ON t.id = tt.app_mcp_tool_id
+                AND tt.language_id = UNHEX(:languageId)
             WHERE a.app_secret IS NOT NULL
             ORDER BY a.name, t.name',
-            ['locale' => $locale = $this->resolveSystemLocale(), 'fallback' => $locale],
+            ['languageId' => Defaults::LANGUAGE_SYSTEM],
         );
-    }
-
-    private function resolveSystemLocale(): string
-    {
-        try {
-            $code = $this->connection->fetchOne(
-                'SELECT lo.code FROM `language` l INNER JOIN locale lo ON l.locale_id = lo.id WHERE l.id = UNHEX(:id) LIMIT 1',
-                ['id' => Defaults::LANGUAGE_SYSTEM],
-            );
-
-            return \is_string($code) && $code !== '' ? $code : 'en-GB';
-        } catch (\Throwable) {
-            return 'en-GB';
-        }
     }
 
     /**

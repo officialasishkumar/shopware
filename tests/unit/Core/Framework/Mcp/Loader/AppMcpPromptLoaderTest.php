@@ -9,7 +9,6 @@ use Mcp\Schema\Prompt;
 use Mcp\Server\RequestContext;
 use Mcp\Server\Session\SessionInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
@@ -157,18 +156,6 @@ class AppMcpPromptLoaderTest extends TestCase
         $this->connection->expects($this->once())
             ->method('fetchAllAssociative')
             ->willReturn([]);
-
-        $registry = $this->createMock(RegistryInterface::class);
-        $registry->expects($this->never())->method('registerPrompt');
-
-        $this->loader->load($registry);
-    }
-
-    #[TestDox('falls back to en-GB locale when fetchOne throws')]
-    public function testResolveSystemLocaleReturnsFallbackWhenFetchOneThrows(): void
-    {
-        $this->connection->method('fetchOne')->willThrowException(new \RuntimeException('DB error'));
-        $this->connection->method('fetchAllAssociative')->willReturn([]);
 
         $registry = $this->createMock(RegistryInterface::class);
         $registry->expects($this->never())->method('registerPrompt');

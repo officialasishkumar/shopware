@@ -69,41 +69,16 @@ class AppMcpPromptLoader implements LoaderInterface
                 p.url,
                 a.name AS app_name,
                 a.app_secret,
-                COALESCE(pt_locale.label, pt_default.label) AS label,
-                COALESCE(pt_locale.description, pt_default.description) AS description
+                pt.label,
+                pt.description
             FROM app_mcp_prompt p
             INNER JOIN app a ON p.app_id = a.id AND a.active = 1
-            LEFT JOIN app_mcp_prompt_translation pt_locale
-                ON p.id = pt_locale.app_mcp_prompt_id
-                AND pt_locale.language_id = (
-                    SELECT l.id FROM `language` l
-                    INNER JOIN locale lo ON l.locale_id = lo.id AND lo.code = :locale
-                    LIMIT 1
-                )
-            LEFT JOIN app_mcp_prompt_translation pt_default
-                ON p.id = pt_default.app_mcp_prompt_id
-                AND pt_default.language_id = (
-                    SELECT l2.id FROM `language` l2
-                    INNER JOIN locale lo2 ON l2.locale_id = lo2.id AND lo2.code = :fallback
-                    LIMIT 1
-                )
+            LEFT JOIN app_mcp_prompt_translation pt
+                ON p.id = pt.app_mcp_prompt_id
+                AND pt.language_id = UNHEX(:languageId)
             WHERE a.app_secret IS NOT NULL
             ORDER BY a.name, p.name',
-            ['locale' => $locale = $this->resolveSystemLocale(), 'fallback' => $locale],
+            ['languageId' => Defaults::LANGUAGE_SYSTEM],
         );
-    }
-
-    private function resolveSystemLocale(): string
-    {
-        try {
-            $code = $this->connection->fetchOne(
-                'SELECT lo.code FROM `language` l INNER JOIN locale lo ON l.locale_id = lo.id WHERE l.id = UNHEX(:id) LIMIT 1',
-                ['id' => Defaults::LANGUAGE_SYSTEM],
-            );
-
-            return \is_string($code) && $code !== '' ? $code : 'en-GB';
-        } catch (\Throwable) {
-            return 'en-GB';
-        }
     }
 }

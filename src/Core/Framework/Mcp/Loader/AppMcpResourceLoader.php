@@ -75,41 +75,16 @@ class AppMcpResourceLoader implements LoaderInterface
                 r.mime_type,
                 a.name AS app_name,
                 a.app_secret,
-                COALESCE(rt_locale.label, rt_default.label) AS label,
-                COALESCE(rt_locale.description, rt_default.description) AS description
+                rt.label,
+                rt.description
             FROM app_mcp_resource r
             INNER JOIN app a ON r.app_id = a.id AND a.active = 1
-            LEFT JOIN app_mcp_resource_translation rt_locale
-                ON r.id = rt_locale.app_mcp_resource_id
-                AND rt_locale.language_id = (
-                    SELECT l.id FROM `language` l
-                    INNER JOIN locale lo ON l.locale_id = lo.id AND lo.code = :locale
-                    LIMIT 1
-                )
-            LEFT JOIN app_mcp_resource_translation rt_default
-                ON r.id = rt_default.app_mcp_resource_id
-                AND rt_default.language_id = (
-                    SELECT l2.id FROM `language` l2
-                    INNER JOIN locale lo2 ON l2.locale_id = lo2.id AND lo2.code = :fallback
-                    LIMIT 1
-                )
+            LEFT JOIN app_mcp_resource_translation rt
+                ON r.id = rt.app_mcp_resource_id
+                AND rt.language_id = UNHEX(:languageId)
             WHERE a.app_secret IS NOT NULL
             ORDER BY a.name, r.name',
-            ['locale' => $locale = $this->resolveSystemLocale(), 'fallback' => $locale],
+            ['languageId' => Defaults::LANGUAGE_SYSTEM],
         );
-    }
-
-    private function resolveSystemLocale(): string
-    {
-        try {
-            $code = $this->connection->fetchOne(
-                'SELECT lo.code FROM `language` l INNER JOIN locale lo ON l.locale_id = lo.id WHERE l.id = UNHEX(:id) LIMIT 1',
-                ['id' => Defaults::LANGUAGE_SYSTEM],
-            );
-
-            return \is_string($code) && $code !== '' ? $code : 'en-GB';
-        } catch (\Throwable) {
-            return 'en-GB';
-        }
     }
 }
