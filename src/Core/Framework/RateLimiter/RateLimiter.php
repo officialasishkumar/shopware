@@ -21,11 +21,15 @@ class RateLimiter
 
     final public const NEWSLETTER_FORM = 'newsletter_form';
 
+    final public const NEWSLETTER_UNSUBSCRIBE_FORM = 'newsletter_unsubscribe_form';
+
     final public const REVOCATION_REQUEST_FORM = 'revocation_request_form';
 
     final public const CART_ADD_LINE_ITEM = 'cart_add_line_item';
 
     final public const MCP = 'mcp';
+
+    final public const APP_SHOP_VERIFY = 'app_shop_verify';
 
     /**
      * @var array<string, RateLimiterFactory>
