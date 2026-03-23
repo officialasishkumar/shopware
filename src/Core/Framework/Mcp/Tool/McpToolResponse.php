@@ -14,6 +14,13 @@ use Shopware\Core\Framework\Log\Package;
  *
  * All tools should use success() and error() to build their return values
  * so AI clients receive a predictable JSON structure.
+ *
+ * Error handling for extension developers:
+ * - Unhandled exceptions propagate to the MCP SDK's generic handler and produce
+ *   a generic "Error while executing tool" message to the AI client.
+ * - To expose error details, either throw a ToolCallException or return $this->error().
+ * - Use $this->error() for expected/business errors (missing privilege, not found, etc.).
+ * - Let unexpected exceptions propagate so they appear in logs without leaking internals.
  */
 #[Package('framework')]
 trait McpToolResponse
@@ -77,10 +84,16 @@ trait McpToolResponse
     /**
      * Executes an operation within a transaction that is always rolled back (dry-run preview).
      *
+     * The context receives SKIP_TRIGGER_FLOW to prevent flows from firing during the
+     * dry-run. Note that with Redis-based delayed cache invalidation, DAL writes may
+     * still enqueue invalidations that are not reverted by the DB rollback.
+     *
      * @param callable(): string $operation Must return the JSON result string
      */
-    private function executeWithDryRun(Connection $connection, callable $operation): string
+    private function executeWithDryRun(Connection $connection, Context $context, callable $operation): string
     {
+        $context->addState(Context::SKIP_TRIGGER_FLOW);
+
         $connection->beginTransaction();
 
         try {
@@ -88,6 +101,8 @@ trait McpToolResponse
         } catch (\Throwable $e) {
             return $this->error($e->getMessage());
         } finally {
+            $context->removeState(Context::SKIP_TRIGGER_FLOW);
+
             try {
                 $connection->rollBack();
             } catch (\Throwable) {

@@ -21,6 +21,7 @@ use Shopware\Core\Framework\Mcp\Tool\CartCheckoutTool;
 use Shopware\Core\Framework\Mcp\Tool\CartManageTool;
 use Shopware\Core\Framework\Mcp\Tool\CheckoutMethodsTool;
 use Shopware\Core\Framework\Mcp\Tool\CustomerLookupTool;
+use Shopware\Core\Framework\Mcp\Tool\EntityAggregateTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityDeleteTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityReadTool;
 use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
@@ -49,7 +50,7 @@ class AclEnforcementTest extends TestCase
     public function testEntitySearchToolDenied(): void
     {
         $tool = new EntitySearchTool(
-            $this->createMock(DefinitionInstanceRegistry::class),
+            $this->createRegistryWithEntity(),
             $this->createMock(RequestCriteriaBuilder::class),
             $this->createDeniedContextProvider(),
             $this->createMock(JsonEntityEncoder::class),
@@ -61,7 +62,7 @@ class AclEnforcementTest extends TestCase
     public function testEntityReadToolDenied(): void
     {
         $tool = new EntityReadTool(
-            $this->createMock(DefinitionInstanceRegistry::class),
+            $this->createRegistryWithEntity(),
             $this->createMock(RequestCriteriaBuilder::class),
             $this->createDeniedContextProvider(),
             $this->createMock(JsonEntityEncoder::class),
@@ -73,7 +74,7 @@ class AclEnforcementTest extends TestCase
     public function testEntityDeleteToolDenied(): void
     {
         $tool = new EntityDeleteTool(
-            $this->createMock(DefinitionInstanceRegistry::class),
+            $this->createRegistryWithEntity(),
             $this->createDeniedContextProvider(),
             $this->createMock(Connection::class),
         );
@@ -84,7 +85,7 @@ class AclEnforcementTest extends TestCase
     public function testEntityUpsertToolDenied(): void
     {
         $tool = new EntityUpsertTool(
-            $this->createMock(DefinitionInstanceRegistry::class),
+            $this->createRegistryWithEntity(),
             $this->createDeniedContextProvider(),
             $this->createMock(Connection::class),
         );
@@ -217,6 +218,17 @@ class AclEnforcementTest extends TestCase
         $this->assertAclDenied(($tool)('sc-1'), 'sales_channel:read');
     }
 
+    public function testEntityAggregateToolDenied(): void
+    {
+        $tool = new EntityAggregateTool(
+            $this->createRegistryWithEntity(),
+            $this->createMock(RequestCriteriaBuilder::class),
+            $this->createDeniedContextProvider(),
+        );
+
+        $this->assertAclDenied(($tool)('product', '[]'), 'product:read');
+    }
+
     public function testStorefrontSearchToolDenied(): void
     {
         $tool = new StorefrontSearchTool(
@@ -230,6 +242,14 @@ class AclEnforcementTest extends TestCase
         );
 
         $this->assertAclDenied(($tool)('sc-1'), 'sales_channel:read');
+    }
+
+    private function createRegistryWithEntity(): DefinitionInstanceRegistry
+    {
+        $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
+
+        return $registry;
     }
 
     private function createDeniedContextProvider(): McpContextProvider

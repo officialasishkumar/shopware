@@ -216,7 +216,7 @@ class OrderCancelTool
 
     private function resolveTransactionAction(string $currentState, bool $refundTransactions): string
     {
-        if ($refundTransactions && \in_array($currentState, ['paid', 'paid_partially', 'authorized'], true)) {
+        if ($refundTransactions && \in_array($currentState, ['paid', 'paid_partially'], true)) {
             return 'refund';
         }
 

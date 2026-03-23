@@ -5,6 +5,7 @@ namespace Shopware\Core\Framework\Mcp\Loader;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Framework\App\Hmac\RequestSigner;
+use Shopware\Core\Framework\App\ShopId\ShopIdProvider;
 use Shopware\Core\Framework\Log\Package;
 
 /**
@@ -21,6 +22,7 @@ class AppMcpToolExecutor
     public function __construct(
         private readonly Client $client,
         private readonly string $shopUrl,
+        private readonly ShopIdProvider $shopIdProvider,
         private readonly int $timeout,
         private readonly ?LoggerInterface $logger = null,
     ) {
@@ -29,13 +31,15 @@ class AppMcpToolExecutor
     /**
      * @param array<string, mixed> $arguments
      */
-    public function execute(string $toolName, string $appSecret, string $url, array $arguments): string
+    public function execute(string $toolName, string $appSecret, string $url, array $arguments, string $appVersion = '0.0.0'): string
     {
         $payload = json_encode([
             'tool' => $toolName,
             'arguments' => $arguments,
             'source' => [
                 'url' => $this->shopUrl,
+                'shopId' => $this->shopIdProvider->getShopId()->id,
+                'appVersion' => $appVersion,
             ],
         ], \JSON_THROW_ON_ERROR);
 
@@ -54,7 +58,7 @@ class AppMcpToolExecutor
 
             $body = $response->getBody()->getContents();
 
-            $this->logger?->info('App MCP tool executed', [
+            $this->logger?->debug('App MCP tool executed', [
                 'tool' => $toolName,
                 'url' => $url,
                 'statusCode' => $response->getStatusCode(),

@@ -15,7 +15,8 @@ Each file in this directory is a single MCP tool -- an action that AI clients ca
 - Place the `#[McpTool]` attribute on the class with `name` and `description`
 - Use the `McpToolResponse` trait and return via `$this->success()` or `$this->error()` from `__invoke`
 - Use `McpContextProvider` to get the authenticated `Context`
-- Write operations must accept a `bool $dryRun = true` parameter
+- Write operations must accept a `bool $dryRun = true` parameter. The `executeWithDryRun` helper adds `SKIP_TRIGGER_FLOW` to the context to prevent Flow Builder actions from firing during preview, and rolls back the transaction afterward
+- Entity tools must validate entity existence with `$this->registry->has($entity)` before ACL checks to provide clear "entity not found" messages
 - Entity tools that return DAL data must inject `JsonEntityEncoder` and use it instead of `jsonSerialize()` to respect `includes`/`excludes`
 - Entity tools returning DAL data should use the `McpEntityIncludes` trait and call `applyDefaultIncludes()` to keep responses compact (see below)
 
@@ -128,13 +129,20 @@ Storefront tools use the Store API / SalesChannelContext layer for customer-faci
 - `CartCheckoutTool` (`shopware-cart-checkout`) -- place an order from an existing cart (dryRun for preview)
 - `CheckoutMethodsTool` (`shopware-checkout-methods`) -- list available payment and shipping methods for a sales channel
 
+## Error handling for extension developers
+Tools using the `McpToolResponse` trait benefit from built-in error handling:
+- `executeWithDryRun()` catches any `\Throwable` and returns it as a structured `$this->error()` response
+- Unhandled exceptions from `__invoke()` produce a generic MCP error (`-32603`). Prefer catching known exceptions and returning `$this->error($message)` instead.
+- Write tools should validate inputs before the operation (e.g., `SystemConfigWriteTool` rejects null values, entity tools validate entity existence)
+
 ## Adding a new tool
 1. Create a class in this directory
 2. Add `#[McpTool(name: 'shopware-{tool-name}', description: '...')]` on the class
 3. Add `use McpToolResponse;` and return via `$this->success()` / `$this->error()`
-4. Register in `src/Core/Framework/DependencyInjection/mcp.php` with `mcp.tool` and `shopware.feature` (flag: `MCP_SERVER`) tags
-5. Add unit test in `tests/unit/Core/Framework/Mcp/Tool/`
-6. Add the tool name to `expectedTools()` in `McpCapabilityDiscoveryTest` (see below)
+4. For entity tools: validate with `$this->registry->has($entity)` before ACL checks
+5. Register in `src/Core/Framework/DependencyInjection/mcp.php` with `mcp.tool` and `shopware.feature` (flag: `MCP_SERVER`) tags
+6. Add unit test in `tests/unit/Core/Framework/Mcp/Tool/`
+7. Add the tool name to `expectedTools()` in `McpCapabilityDiscoveryTest` (see below)
 
 ## Validating that a tool is actually reachable
 

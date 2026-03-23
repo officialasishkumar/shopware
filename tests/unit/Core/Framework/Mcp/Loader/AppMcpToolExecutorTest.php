@@ -10,6 +10,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Framework\App\Hmac\RequestSigner;
+use Shopware\Core\Framework\App\ShopId\ShopId;
+use Shopware\Core\Framework\App\ShopId\ShopIdProvider;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Loader\AppMcpToolExecutor;
 
@@ -31,6 +33,7 @@ class AppMcpToolExecutorTest extends TestCase
         $this->executor = new AppMcpToolExecutor(
             $client,
             'https://shop.example.com',
+            $this->createShopIdProvider(),
             30,
         );
     }
@@ -45,6 +48,7 @@ class AppMcpToolExecutorTest extends TestCase
             'test-secret',
             'https://app.example.com/mcp/sync',
             ['foo' => 'bar'],
+            '1.0.0',
         );
 
         static::assertSame($expectedBody, $result);
@@ -61,6 +65,8 @@ class AppMcpToolExecutorTest extends TestCase
         static::assertSame('sync-orders', $body['tool']);
         static::assertSame(['foo' => 'bar'], $body['arguments']);
         static::assertSame('https://shop.example.com', $body['source']['url']);
+        static::assertSame('test-shop-id', $body['source']['shopId']);
+        static::assertSame('1.0.0', $body['source']['appVersion']);
     }
 
     public function testFailedExecutionReturnsJsonError(): void
@@ -87,13 +93,14 @@ class AppMcpToolExecutorTest extends TestCase
         $mock->append(new Response(200, [], '{"result":"ok"}'));
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects($this->once())->method('info');
+        $logger->expects($this->once())->method('debug');
         $logger->expects($this->once())->method('warning')
             ->with(static::stringContains('missing "success" key'));
 
         $executor = new AppMcpToolExecutor(
             new Client(['handler' => HandlerStack::create($mock)]),
             'https://shop.example.com',
+            $this->createShopIdProvider(),
             30,
             $logger,
         );
@@ -113,6 +120,7 @@ class AppMcpToolExecutorTest extends TestCase
         $executor = new AppMcpToolExecutor(
             new Client(['handler' => HandlerStack::create($mock)]),
             'https://shop.example.com',
+            $this->createShopIdProvider(),
             30,
             $logger,
         );
@@ -128,12 +136,13 @@ class AppMcpToolExecutorTest extends TestCase
         $mock->append(new Response(200, [], '{"success":true,"data":{}}'));
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects($this->once())->method('info');
+        $logger->expects($this->once())->method('debug');
         $logger->expects($this->never())->method('warning');
 
         $executor = new AppMcpToolExecutor(
             new Client(['handler' => HandlerStack::create($mock)]),
             'https://shop.example.com',
+            $this->createShopIdProvider(),
             30,
             $logger,
         );
@@ -152,5 +161,13 @@ class AppMcpToolExecutorTest extends TestCase
         $signature = $lastRequest->getHeaderLine(RequestSigner::SHOPWARE_SHOP_SIGNATURE);
         static::assertNotEmpty($signature);
         static::assertSame(64, \strlen($signature));
+    }
+
+    private function createShopIdProvider(): ShopIdProvider
+    {
+        $provider = $this->createMock(ShopIdProvider::class);
+        $provider->method('getShopId')->willReturn(ShopId::v2('test-shop-id'));
+
+        return $provider;
     }
 }

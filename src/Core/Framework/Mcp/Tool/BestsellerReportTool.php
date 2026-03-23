@@ -39,7 +39,7 @@ class BestsellerReportTool
     {
         $context = $this->contextProvider->getContext();
 
-        if ($error = $this->requirePrivilege($context, 'order:read')) {
+        if ($error = $this->requirePrivilege($context, 'order:read', 'product:read')) {
             return $error;
         }
 

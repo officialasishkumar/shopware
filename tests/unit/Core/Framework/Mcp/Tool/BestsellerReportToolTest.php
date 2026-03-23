@@ -119,6 +119,27 @@ class BestsellerReportToolTest extends TestCase
         static::assertStringContainsString('order:read', $data['error']);
     }
 
+    public function testDeniesAccessWithoutProductReadWhenOrderReadGranted(): void
+    {
+        $source = new AdminApiSource(null, null);
+        $source->setPermissions(['order:read']);
+        $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
+
+        $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->expects($this->never())->method('getRepository');
+
+        $contextProvider = $this->createMock(McpContextProvider::class);
+        $contextProvider->method('getContext')->willReturn($context);
+
+        $tool = new BestsellerReportTool($registry, $contextProvider);
+        $output = ($tool)('2025-01-01', '2025-01-31');
+
+        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
+
+        static::assertFalse($data['success']);
+        static::assertStringContainsString('product:read', $data['error']);
+    }
+
     public function testLimitOutOfRangeReturnsError(): void
     {
         $tool = $this->createTool(bestsellerBuckets: [], revenueBuckets: [], products: []);

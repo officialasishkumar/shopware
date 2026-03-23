@@ -31,6 +31,10 @@ class EntityUpsertTool
     {
         $context = $this->contextProvider->getContext();
 
+        if (!$this->registry->has($entity)) {
+            return $this->error(\sprintf('Entity "%s" not found. Use the shopware://entities resource for available entity names.', $entity));
+        }
+
         $data = json_decode($payload, true, 512, \JSON_THROW_ON_ERROR);
 
         if (!\is_array($data)) {
@@ -52,11 +56,14 @@ class EntityUpsertTool
         }
 
         $privileges = [];
-        if ($needsCreate || !$needsUpdate) {
+        if ($needsCreate) {
             $privileges[] = $entity . ':create';
         }
         if ($needsUpdate) {
             $privileges[] = $entity . ':update';
+        }
+        if ($privileges === []) {
+            $privileges[] = $entity . ':create';
         }
 
         if ($error = $this->requirePrivilege($context, ...$privileges)) {
@@ -66,7 +73,7 @@ class EntityUpsertTool
         $repository = $this->registry->getRepository($entity);
 
         if ($dryRun) {
-            return $this->executeWithDryRun($this->connection, function () use ($repository, $data, $context) {
+            return $this->executeWithDryRun($this->connection, $context, function () use ($repository, $data, $context) {
                 $events = $repository->upsert($data, $context);
 
                 return $this->success($this->formatWriteEvents($events, 'upsert'), ['dryRun' => true]);

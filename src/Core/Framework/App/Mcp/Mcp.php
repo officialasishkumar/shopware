@@ -7,6 +7,7 @@ use Shopware\Core\Framework\App\Mcp\Xml\McpPrompts;
 use Shopware\Core\Framework\App\Mcp\Xml\McpResources;
 use Shopware\Core\Framework\App\Mcp\Xml\McpTools;
 use Shopware\Core\Framework\Log\Package;
+use Symfony\Component\Config\Util\XmlUtils;
 
 /**
  * @internal only for use by the app-system
@@ -24,12 +25,11 @@ class Mcp
 
     public static function createFromXmlFile(string $xmlFile): self
     {
-        if (!is_readable($xmlFile)) {
-            throw AppException::xmlParsingException($xmlFile, \sprintf('File "%s" is not readable or does not exist.', $xmlFile));
+        try {
+            $doc = XmlUtils::loadFile($xmlFile);
+        } catch (\Exception $e) {
+            throw AppException::xmlParsingException($xmlFile, $e->getMessage());
         }
-
-        $doc = new \DOMDocument();
-        $doc->loadXML((string) file_get_contents($xmlFile));
 
         $toolsElement = $doc->getElementsByTagName('mcp-tools')->item(0);
         $tools = $toolsElement instanceof \DOMElement ? McpTools::fromXml($toolsElement) : null;

@@ -88,6 +88,24 @@ class SystemConfigWriteToolTest extends TestCase
         static::assertSame('plain text value', $data['data']['newValue']);
     }
 
+    public function testNullJsonValueReturnsError(): void
+    {
+        $configService = $this->createMock(SystemConfigService::class);
+        $configService->expects($this->never())->method('set');
+        $configService->expects($this->never())->method('get');
+
+        $contextProvider = $this->createMock(McpContextProvider::class);
+        $contextProvider->method('getContext')->willReturn(Context::createDefaultContext());
+
+        $tool = new SystemConfigWriteTool($configService, $contextProvider);
+        $output = ($tool)('core.test.key', 'null', null, false);
+
+        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
+
+        static::assertFalse($data['success']);
+        static::assertStringContainsString('Setting null is not supported via MCP', $data['error']);
+    }
+
     public function testDeniesAccessWithoutUpdatePermission(): void
     {
         $source = new AdminApiSource(null, null);

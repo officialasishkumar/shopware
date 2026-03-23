@@ -39,7 +39,7 @@ class CartCheckoutTool
     ): string {
         $context = $this->contextProvider->getContext();
 
-        if ($error = $this->requirePrivilege($context, 'sales_channel:read')) {
+        if ($error = $this->requirePrivilege($context, 'sales_channel:read', 'order:create')) {
             return $error;
         }
 

@@ -48,6 +48,7 @@ class EntityReadToolTest extends TestCase
         $definition = $this->createMock(EntityDefinition::class);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->with('product')->willReturn($definition);
         $registry->method('getRepository')->with('product')->willReturn($repository);
 
@@ -91,6 +92,7 @@ class EntityReadToolTest extends TestCase
         $definition = $this->createMock(EntityDefinition::class);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->with('product')->willReturn($definition);
         $registry->method('getRepository')->with('product')->willReturn($repository);
 
@@ -121,6 +123,7 @@ class EntityReadToolTest extends TestCase
         $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->expects($this->never())->method('getRepository');
 
         $contextProvider = $this->createMock(McpContextProvider::class);

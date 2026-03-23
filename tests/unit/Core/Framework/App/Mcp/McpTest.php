@@ -71,7 +71,6 @@ class McpTest extends TestCase
     public function testFileNotReadableThrowsException(): void
     {
         $this->expectException(AppException::class);
-        $this->expectExceptionMessageMatches('/not readable/');
 
         Mcp::createFromXmlFile('/non/existent/path/mcp.xml');
     }

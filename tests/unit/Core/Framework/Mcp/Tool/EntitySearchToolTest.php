@@ -50,6 +50,7 @@ class EntitySearchToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->with('product')->willReturn($definition);
         $registry->method('getRepository')->with('product')->willReturn($repository);
 
@@ -97,6 +98,7 @@ class EntitySearchToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -142,6 +144,7 @@ class EntitySearchToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -186,6 +189,7 @@ class EntitySearchToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -227,6 +231,7 @@ class EntitySearchToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -268,6 +273,7 @@ class EntitySearchToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -309,6 +315,7 @@ class EntitySearchToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -342,6 +349,7 @@ class EntitySearchToolTest extends TestCase
         $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->expects($this->never())->method('getRepository');
 
         $contextProvider = $this->createMock(McpContextProvider::class);

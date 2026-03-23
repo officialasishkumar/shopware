@@ -35,6 +35,7 @@ class EntityDeleteToolTest extends TestCase
         $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->expects($this->never())->method('getRepository');
 
         $contextProvider = $this->createMock(McpContextProvider::class);
@@ -153,6 +154,7 @@ class EntityDeleteToolTest extends TestCase
         $connection ??= $this->createMock(Connection::class);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getRepository')->willReturn($repository);
 
         $contextProvider = $this->createMock(McpContextProvider::class);

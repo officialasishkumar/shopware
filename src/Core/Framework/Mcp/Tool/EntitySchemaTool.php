@@ -37,6 +37,10 @@ class EntitySchemaTool
 
     public function __invoke(string $entity): string
     {
+        if (!$this->registry->has($entity)) {
+            return $this->error(\sprintf('Entity "%s" not found. Use the shopware://entities resource for available entity names.', $entity));
+        }
+
         $definition = $this->registry->getByEntityName($entity);
 
         $fields = [];

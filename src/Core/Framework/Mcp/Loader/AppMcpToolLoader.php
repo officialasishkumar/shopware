@@ -9,6 +9,7 @@ use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\Request\CallToolRequest;
 use Mcp\Schema\Tool;
 use Mcp\Server\RequestContext;
+use Psr\Log\LoggerInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 
@@ -30,6 +31,7 @@ class AppMcpToolLoader implements LoaderInterface
         private readonly Connection $connection,
         private readonly AppMcpToolExecutor $executor,
         private readonly array $allowedTools = [],
+        private readonly ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -46,6 +48,12 @@ class AppMcpToolLoader implements LoaderInterface
             $name = (string) $toolData['name'];
             $toolName = $appName . '-' . $name;
 
+            if (str_starts_with($toolName, 'shopware-')) {
+                $this->logger?->warning('App tool name uses reserved "shopware-" prefix, skipping', ['toolName' => $toolName, 'appName' => $appName]);
+
+                continue;
+            }
+
             if ($this->allowedTools !== [] && !\in_array($toolName, $this->allowedTools, true)) {
                 continue;
             }
@@ -61,12 +69,13 @@ class AppMcpToolLoader implements LoaderInterface
 
             $appSecret = (string) $toolData['app_secret'];
             $url = (string) $toolData['url'];
+            $appVersion = (string) ($toolData['version'] ?? '0.0.0');
 
-            $registry->registerTool($tool, function (RequestContext $context) use ($toolName, $appSecret, $url): string {
+            $registry->registerTool($tool, function (RequestContext $context) use ($toolName, $appSecret, $url, $appVersion): string {
                 $request = $context->getRequest();
                 $arguments = $request instanceof CallToolRequest ? $request->arguments : [];
 
-                return $this->executor->execute($toolName, $appSecret, $url, $arguments);
+                return $this->executor->execute($toolName, $appSecret, $url, $arguments, $appVersion);
             }, true);
         }
     }
@@ -83,6 +92,7 @@ class AppMcpToolLoader implements LoaderInterface
                 t.input_schema,
                 a.name AS app_name,
                 a.app_secret,
+                a.version,
                 tt.label,
                 tt.description
             FROM app_mcp_tool t

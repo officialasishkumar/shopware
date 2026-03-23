@@ -123,6 +123,11 @@ class McpTool extends XmlElement
             \assert($property instanceof \DOMElement);
 
             $name = $property->getAttribute('name');
+
+            if ($name === '') {
+                continue;
+            }
+
             $entry = ['type' => $property->getAttribute('type') ?: 'string'];
 
             if ($property->hasAttribute('description')) {

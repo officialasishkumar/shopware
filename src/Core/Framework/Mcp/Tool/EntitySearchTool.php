@@ -35,6 +35,10 @@ class EntitySearchTool
     {
         $context = $this->contextProvider->getContext();
 
+        if (!$this->registry->has($entity)) {
+            return $this->error(\sprintf('Entity "%s" not found. Use the shopware://entities resource for available entity names.', $entity));
+        }
+
         if ($error = $this->requirePrivilege($context, $entity . ':read')) {
             return $error;
         }

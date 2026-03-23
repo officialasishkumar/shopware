@@ -36,6 +36,10 @@ class SystemConfigWriteTool
         $decodedValue = json_decode($value, true);
         $actualValue = json_last_error() === \JSON_ERROR_NONE ? $decodedValue : $value;
 
+        if ($actualValue === null) {
+            return $this->error('Setting null is not supported via MCP as it would delete the config entry. Use the Admin API to delete configuration values.');
+        }
+
         $oldValue = $this->systemConfigService->get($key, $salesChannelId);
 
         if ($dryRun) {

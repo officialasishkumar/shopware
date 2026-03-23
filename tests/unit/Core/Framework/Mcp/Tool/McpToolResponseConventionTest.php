@@ -6,6 +6,9 @@ use Doctrine\DBAL\Connection;
 use Mcp\Capability\Attribute\McpTool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Api\Context\AdminApiSource;
+use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Tool\McpToolResponse;
 use Symfony\Component\Finder\Finder;
@@ -115,8 +118,10 @@ class McpToolResponseConventionTest extends TestCase
         $connection = static::createStub(Connection::class);
         $connection->method('rollBack')->willThrowException(new \RuntimeException('rollback failed'));
 
+        $context = new Context(new AdminApiSource(null, null), [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
+
         $helper = new McpToolResponseTestHelper();
-        $result = json_decode($helper->callDryRun($connection, fn () => '{"success":true}'), true, 512, \JSON_THROW_ON_ERROR);
+        $result = json_decode($helper->callDryRun($connection, $context, fn () => '{"success":true}'), true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertTrue($result['success']);
     }
@@ -160,8 +165,8 @@ class McpToolResponseTestHelper
     /**
      * @param callable(): string $operation
      */
-    public function callDryRun(Connection $connection, callable $operation): string
+    public function callDryRun(Connection $connection, Context $context, callable $operation): string
     {
-        return $this->executeWithDryRun($connection, $operation);
+        return $this->executeWithDryRun($connection, $context, $operation);
     }
 }

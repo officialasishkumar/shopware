@@ -5,6 +5,7 @@ namespace Shopware\Core\Framework\Mcp\Tool;
 use Mcp\Capability\Attribute\McpTool;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsAnyFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Context\McpContextProvider;
@@ -129,26 +130,17 @@ class ProductCreateTool
      */
     private function resolveCategoryIds(string $categories, \Shopware\Core\Framework\Context $context): array
     {
-        $names = array_map('trim', explode(',', $categories));
-        $repository = $this->registry->getRepository('category');
-        $ids = [];
+        $names = array_filter(array_map('trim', explode(',', $categories)), static fn (string $n): bool => $n !== '');
 
-        foreach ($names as $categoryName) {
-            if ($categoryName === '') {
-                continue;
-            }
-
-            $criteria = new Criteria();
-            $criteria->addFilter(new EqualsFilter('name', $categoryName));
-            $criteria->setLimit(1);
-
-            $id = $repository->searchIds($criteria, $context)->firstId();
-
-            if ($id !== null) {
-                $ids[] = $id;
-            }
+        if ($names === []) {
+            return [];
         }
 
-        return $ids;
+        $repository = $this->registry->getRepository('category');
+
+        $criteria = new Criteria();
+        $criteria->addFilter(new EqualsAnyFilter('name', array_values($names)));
+
+        return $repository->searchIds($criteria, $context)->getIds();
     }
 }

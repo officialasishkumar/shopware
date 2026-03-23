@@ -13,6 +13,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\RequestCriteriaBuilder;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Context\McpContextProvider;
 use Shopware\Core\Framework\Util\Random;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SalesChannel\Context\SalesChannelContextServiceInterface;
 use Shopware\Core\System\SalesChannel\Context\SalesChannelContextServiceParameters;
 use Shopware\Core\System\SalesChannel\Entity\SalesChannelRepository;
@@ -73,7 +74,7 @@ class StorefrontSearchTool
             $payload['term'] = $term;
         }
 
-        $propertyFilter = $this->resolvePropertyFilters($properties);
+        $propertyFilter = $this->resolvePropertyFilters($properties, $salesChannelContext->getContext()->getLanguageIdChain());
 
         if (\is_string($propertyFilter)) {
             return $propertyFilter;
@@ -115,9 +116,11 @@ class StorefrontSearchTool
      * Uses the same AND/OR logic as PropertyListingFilterHandler:
      * OR within each property group, AND across groups.
      *
+     * @param list<string> $languageIds chain of language IDs to scope translation lookups
+     *
      * @return array<string, mixed>|string filter array, empty array if no properties, or error string
      */
-    private function resolvePropertyFilters(string $propertiesJson): array|string
+    private function resolvePropertyFilters(string $propertiesJson, array $languageIds): array|string
     {
         /** @var array<string, string>|null $properties */
         $properties = json_decode($propertiesJson, true, 512, \JSON_THROW_ON_ERROR);
@@ -134,17 +137,21 @@ class StorefrontSearchTool
              FROM property_group_option pgo
              INNER JOIN property_group_option_translation pgot
                 ON pgot.property_group_option_id = pgo.id
+                AND pgot.language_id IN (:languageIds)
              INNER JOIN property_group_translation pgt
                 ON pgt.property_group_id = pgo.property_group_id
+                AND pgt.language_id IN (:languageIds)
              WHERE pgt.name IN (:groupNames)
                AND pgot.name IN (:optionNames)',
             [
                 'groupNames' => array_keys($properties),
                 'optionNames' => array_values($properties),
+                'languageIds' => Uuid::fromHexToBytesList($languageIds),
             ],
             [
                 'groupNames' => ArrayParameterType::STRING,
                 'optionNames' => ArrayParameterType::STRING,
+                'languageIds' => ArrayParameterType::STRING,
             ],
         );
 

@@ -112,6 +112,7 @@ class EntityAggregateToolTest extends TestCase
             });
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -150,6 +151,7 @@ class EntityAggregateToolTest extends TestCase
         );
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -189,6 +191,7 @@ class EntityAggregateToolTest extends TestCase
         );
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 
@@ -207,6 +210,7 @@ class EntityAggregateToolTest extends TestCase
         $context = Context::createDefaultContext();
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($this->createMock(EntityDefinition::class));
         $registry->method('getRepository')->willReturn($this->createMock(EntityRepository::class));
 
@@ -229,6 +233,7 @@ class EntityAggregateToolTest extends TestCase
         $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->expects($this->never())->method('getRepository');
 
         $contextProvider = $this->createMock(McpContextProvider::class);
@@ -256,6 +261,7 @@ class EntityAggregateToolTest extends TestCase
         $repository->method('search')->willReturn($result);
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
         $registry->method('getRepository')->willReturn($repository);
 

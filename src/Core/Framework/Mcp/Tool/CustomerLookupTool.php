@@ -58,10 +58,10 @@ class CustomerLookupTool
         $criteria->addAssociation('defaultBillingAddress.country');
         $criteria->addAssociation('defaultShippingAddress.country');
 
-        $orderAssociation = $criteria->getAssociation('orderCustomers.order');
-        $orderAssociation->addAssociation('stateMachineState');
-        $orderAssociation->addSorting(new FieldSorting('orderDateTime', FieldSorting::DESCENDING));
-        $orderAssociation->setLimit(10);
+        $orderCustomerAssoc = $criteria->getAssociation('orderCustomers');
+        $orderCustomerAssoc->setLimit(10);
+        $orderCustomerAssoc->addAssociation('order.stateMachineState');
+        $orderCustomerAssoc->addSorting(new FieldSorting('order.orderDateTime', FieldSorting::DESCENDING));
 
         $result = $repository->search($criteria, $context);
 

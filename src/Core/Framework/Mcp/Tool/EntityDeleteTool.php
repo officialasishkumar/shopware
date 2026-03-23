@@ -31,6 +31,10 @@ class EntityDeleteTool
     {
         $context = $this->contextProvider->getContext();
 
+        if (!$this->registry->has($entity)) {
+            return $this->error(\sprintf('Entity "%s" not found. Use the shopware://entities resource for available entity names.', $entity));
+        }
+
         if ($error = $this->requirePrivilege($context, $entity . ':delete')) {
             return $error;
         }
@@ -53,7 +57,7 @@ class EntityDeleteTool
         $deletePayload = array_map(static fn (string $id): array => ['id' => $id], $idList);
 
         if ($dryRun) {
-            return $this->executeWithDryRun($this->connection, function () use ($repository, $deletePayload, $context) {
+            return $this->executeWithDryRun($this->connection, $context, function () use ($repository, $deletePayload, $context) {
                 $events = $repository->delete($deletePayload, $context);
 
                 return $this->success($this->formatWriteEvents($events, 'delete'), ['dryRun' => true]);

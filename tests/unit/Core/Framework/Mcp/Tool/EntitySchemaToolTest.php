@@ -37,6 +37,7 @@ class EntitySchemaToolTest extends TestCase
         $definition->compile($this->createMock(DefinitionInstanceRegistry::class));
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->with('rich_test')->willReturn($definition);
 
         $tool = new EntitySchemaTool($registry);
@@ -67,6 +68,7 @@ class EntitySchemaToolTest extends TestCase
         $definition = new RichTestEntityDefinition();
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
         $definition->compile($registry);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->with('rich_test')->willReturn($definition);
 
         $tool = new EntitySchemaTool($registry);
@@ -90,6 +92,7 @@ class EntitySchemaToolTest extends TestCase
         $definition->compile($this->createMock(DefinitionInstanceRegistry::class));
 
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
         $registry->method('getByEntityName')->willReturn($definition);
 
         $tool = new EntitySchemaTool($registry);

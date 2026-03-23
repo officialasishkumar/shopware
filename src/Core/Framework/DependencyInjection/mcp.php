@@ -16,6 +16,7 @@ use Shopware\Core\Framework\App\Aggregate\AppMcpToolTranslation\AppMcpToolTransl
 use Shopware\Core\Framework\App\Lifecycle\Persister\McpPromptPersister;
 use Shopware\Core\Framework\App\Lifecycle\Persister\McpResourcePersister;
 use Shopware\Core\Framework\App\Lifecycle\Persister\McpToolPersister;
+use Shopware\Core\Framework\App\ShopId\ShopIdProvider;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\Event\BusinessEventCollector;
 use Shopware\Core\Framework\Mcp\Authentication\McpAuthenticationListener;
@@ -342,6 +343,7 @@ return static function (ContainerConfigurator $container): void {
         ->args([
             service('shopware.app_system.guzzle'),
             env('APP_URL'),
+            service(ShopIdProvider::class),
             param('shopware.mcp.app_tool_timeout'),
             service('logger'),
         ])
@@ -353,6 +355,7 @@ return static function (ContainerConfigurator $container): void {
             service('Doctrine\DBAL\Connection'),
             service(AppMcpToolExecutor::class),
             param('shopware.mcp.allowed_tools'),
+            service('logger'),
         ])
         ->tag('mcp.loader')
         ->tag('shopware.feature', ['flag' => 'MCP_SERVER']);

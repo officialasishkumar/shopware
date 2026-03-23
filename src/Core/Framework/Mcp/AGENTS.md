@@ -53,7 +53,7 @@ All capability names use hyphen-separated prefixes (`a-zA-Z0-9_-` only, no dots)
 - **Plugin**: `{plugin-name}-{capability-name}` (e.g., `swag-admin-users-list-admins`)
 - **App**: `{app-name}-{capability-name}` (e.g., `my-erp-sync-orders`)
 
-The `McpToolCompilerPass` enforces unique names and throws on conflicts.
+The `McpToolCompilerPass` enforces unique names and throws on conflicts. The `shopware-` prefix is reserved for core tools; `AppMcpToolLoader` skips app tools whose computed name starts with `shopware-`.
 
 ## Folder structure
 - `Authentication/` -- MCP authentication listener
@@ -70,7 +70,8 @@ The `McpToolCompilerPass` enforces unique names and throws on conflicts.
 - All classes use `@experimental stableVersion:v6.8.0 feature:MCP_SERVER` annotation
 - All classes use `#[Package('framework')]` attribute
 - Tools return JSON strings; the MCP protocol handles transport encoding
-- Write tools default to `dryRun=true` for safety
+- Write tools default to `dryRun=true` for safety. Dry-run adds `SKIP_TRIGGER_FLOW` to the context to prevent Flow Builder actions during preview
+- Entity tools validate entity existence with `registry->has()` before ACL checks to provide clear error messages
 - Service IDs use FQCN; tags include both `mcp.tool` (for SDK discovery) and `shopware.feature` (for flag gating)
 
 ## Validating capabilities are loaded
@@ -91,11 +92,14 @@ Failure in either layer causes the capability to be silently absent. These are t
 **`McpCapabilityDiscoveryTest`** (`tests/integration/Core/Framework/Mcp/McpCapabilityDiscoveryTest.php`) boots the full kernel, authenticates, and calls the live MCP HTTP endpoint. It is the authoritative check that mirrors what the MCP Inspector does interactively. Add new capability names to its `expectedTools()` / `expectedPrompts()` / `expectedResources()` lists when adding new capabilities.
 
 ## Extensibility
-- **Plugins**: Tag services with `shopware.mcp.tool` -- the `McpToolCompilerPass` maps them to `mcp.tool` so they appear in the registry
-- **Apps**: Declare capabilities in `Resources/mcp.xml` -- parsed by `Mcp::createFromXmlFile()`, persisted by the respective Persister (`McpToolPersister`, `McpPromptPersister`, `McpResourcePersister`), loaded at runtime by the corresponding Loader (`AppMcpToolLoader`, `AppMcpPromptLoader`, `AppMcpResourceLoader`)
-- **Non-Core bundles**: MCP tools that depend on bundle-specific services live in that bundle (e.g., `src/Storefront/Mcp/Tool/` for Storefront-dependent tools). Tag them with **`mcp.tool`** directly — `McpToolCompilerPass` only remaps the `shopware.mcp.tool` tag used by plugins, not the internal `mcp.tool` tag. Using the wrong tag means the tool silently disappears from the registry.
+- **Plugins**: Tag services with `shopware.mcp.tool` -- the `McpToolCompilerPass` maps them to `mcp.tool` so they appear in the registry. Use the `McpToolResponse` trait for consistent error handling and response formatting.
+- **Apps**: Declare capabilities in `Resources/mcp.xml` -- parsed by `Mcp::createFromXmlFile()` (XXE-safe via `XmlUtils::loadFile()`), persisted by the respective Persister (`McpToolPersister`, `McpPromptPersister`, `McpResourcePersister`), loaded at runtime by the corresponding Loader (`AppMcpToolLoader`, `AppMcpPromptLoader`, `AppMcpResourceLoader`). App tool webhook payloads include `shopId` and `appVersion` in the `source` object.
+- **Non-Core bundles**: MCP tools that depend on bundle-specific services live in that bundle (e.g., `src/Storefront/Mcp/Tool/` for Storefront-dependent tools). Tag them with **`mcp.tool`** directly -- `McpToolCompilerPass` only remaps the `shopware.mcp.tool` tag used by plugins, not the internal `mcp.tool` tag. Using the wrong tag means the tool silently disappears from the registry.
+- **Reserved prefix**: The `shopware-` prefix is reserved for core tools. App tools with names starting with `shopware-` are skipped during loading.
 
 ## Security
 - **Tool allowlist**: Configure `shopware.mcp.allowed_tools` to restrict exposed tools (empty = all allowed)
-- **Audit logging**: Tool invocations logged via `mcp` Monolog channel
+- **Audit logging**: Tool invocations logged via `mcp` Monolog channel (debug level for successful app tool calls, error level for failures)
 - **App HMAC**: App tool calls signed with `RequestSigner` using app secret
+- **XML parsing**: App `mcp.xml` files parsed with `XmlUtils::loadFile()` to prevent XXE attacks
+- **Entity validation**: Entity tools check `registry->has()` before ACL, returning a clear error for unknown entities

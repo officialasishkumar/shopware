@@ -92,10 +92,19 @@ class StorefrontSearchToolTest extends TestCase
     #[TestDox('resolves single property filter from database')]
     public function testResolvesSinglePropertyFilter(): void
     {
-        $connection = static::createStub(Connection::class);
-        $connection->method('fetchAllAssociative')->willReturn([
-            ['option_id' => 'opt-red', 'group_id' => 'grp-color', 'group_name' => 'Color', 'option_name' => 'Red'],
-        ]);
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
+            ->method('fetchAllAssociative')
+            ->with(
+                static::stringContains('pgot.language_id IN'),
+                static::callback(function (array $params): bool {
+                    return isset($params['languageIds']) && $params['languageIds'] !== [];
+                }),
+                static::anything(),
+            )
+            ->willReturn([
+                ['option_id' => 'opt-red', 'group_id' => 'grp-color', 'group_name' => 'Color', 'option_name' => 'Red'],
+            ]);
 
         $criteriaBuilder = static::createStub(RequestCriteriaBuilder::class);
         $criteriaBuilder->method('fromArray')->willReturnCallback(function (array $payload) {
@@ -120,11 +129,20 @@ class StorefrontSearchToolTest extends TestCase
     #[TestDox('resolves multiple property filters with AND/OR structure')]
     public function testResolvesMultiplePropertyFilters(): void
     {
-        $connection = static::createStub(Connection::class);
-        $connection->method('fetchAllAssociative')->willReturn([
-            ['option_id' => 'opt-red', 'group_id' => 'grp-color', 'group_name' => 'Color', 'option_name' => 'Red'],
-            ['option_id' => 'opt-xl', 'group_id' => 'grp-size', 'group_name' => 'Size', 'option_name' => 'XL'],
-        ]);
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
+            ->method('fetchAllAssociative')
+            ->with(
+                static::stringContains('pgt.language_id IN'),
+                static::callback(function (array $params): bool {
+                    return isset($params['languageIds']) && $params['languageIds'] !== [];
+                }),
+                static::anything(),
+            )
+            ->willReturn([
+                ['option_id' => 'opt-red', 'group_id' => 'grp-color', 'group_name' => 'Color', 'option_name' => 'Red'],
+                ['option_id' => 'opt-xl', 'group_id' => 'grp-size', 'group_name' => 'Size', 'option_name' => 'XL'],
+            ]);
 
         $criteriaBuilder = static::createStub(RequestCriteriaBuilder::class);
         $criteriaBuilder->method('fromArray')->willReturnCallback(function (array $payload) {
@@ -152,8 +170,17 @@ class StorefrontSearchToolTest extends TestCase
     #[TestDox('returns error when property group/option not found')]
     public function testPropertyNotFoundReturnsError(): void
     {
-        $connection = static::createStub(Connection::class);
-        $connection->method('fetchAllAssociative')->willReturn([]);
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())
+            ->method('fetchAllAssociative')
+            ->with(
+                static::stringContains('language_id'),
+                static::callback(function (array $params): bool {
+                    return isset($params['languageIds']) && $params['languageIds'] !== [];
+                }),
+                static::anything(),
+            )
+            ->willReturn([]);
 
         $tool = $this->createTool(connection: $connection);
         $output = ($tool)('sc-1', '{}', null, json_encode(['Color' => 'Neon'], \JSON_THROW_ON_ERROR));

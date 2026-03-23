@@ -9,6 +9,8 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Command\DebugMcpCommand;
 use Shopware\Core\Framework\Mcp\Context\McpContextProvider;
 use Shopware\Core\Framework\Mcp\Controller\McpServerController;
+use Shopware\Core\Framework\Mcp\Loader\AppMcpPromptLoader;
+use Shopware\Core\Framework\Mcp\Loader\AppMcpResourceLoader;
 use Shopware\Core\Framework\Mcp\Loader\AppMcpToolExecutor;
 use Shopware\Core\Framework\Mcp\Loader\AppMcpToolLoader;
 use Shopware\Core\Framework\Mcp\Prompt\ShopwareContextPrompt;
@@ -24,6 +26,7 @@ use Shopware\Core\Framework\Mcp\Tool\CartCheckoutTool;
 use Shopware\Core\Framework\Mcp\Tool\CartManageTool;
 use Shopware\Core\Framework\Mcp\Tool\CheckoutMethodsTool;
 use Shopware\Core\Framework\Mcp\Tool\CustomerLookupTool;
+use Shopware\Core\Framework\Mcp\Tool\EntityAggregateTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityDeleteTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityReadTool;
 use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
@@ -87,8 +90,11 @@ class McpFeatureFlagTest extends TestCase
             [CurrencyListResource::class],
             [LanguageListResource::class],
             [StateMachineResource::class],
+            [EntityAggregateTool::class],
             [AppMcpToolExecutor::class],
             [AppMcpToolLoader::class],
+            [AppMcpPromptLoader::class],
+            [AppMcpResourceLoader::class],
         ];
     }
 

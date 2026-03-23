@@ -114,6 +114,18 @@ class OrderCancelToolTest extends TestCase
         static::assertSame('cancel', $data['data']['transactions'][0]['action']);
     }
 
+    public function testRefundTransactionsFlagUsesCancelForAuthorizedState(): void
+    {
+        $order = $this->buildOrder('open', 'authorized', 'open');
+        $tool = $this->createTool($order, availableActions: ['cancel', 'refund']);
+
+        $output = ($tool)(orderNumber: '10001', refundTransactions: true, dryRun: true);
+        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
+
+        static::assertTrue($data['success']);
+        static::assertSame('cancel', $data['data']['transactions'][0]['action']);
+    }
+
     public function testTransitionNotAvailableReturnsNote(): void
     {
         $order = $this->buildOrder('in_progress', 'open', 'open');

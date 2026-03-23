@@ -185,6 +185,8 @@ class McpCapabilityDiscoveryTest extends TestCase
             ], \JSON_THROW_ON_ERROR),
         );
 
+        static::assertSame(200, $browser->getResponse()->getStatusCode(), 'MCP endpoint returned non-200 status');
+
         $content = $browser->getResponse()->getContent();
         static::assertNotFalse($content, 'MCP response was empty');
 

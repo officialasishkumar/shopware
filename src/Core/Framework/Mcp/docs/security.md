@@ -12,7 +12,7 @@ Entity tools (`entity-search`, `entity-read`, `entity-upsert`, `entity-delete`),
 - `shopware-product-create` -- `product:create`, `product:read`, `tax:read`, `currency:read`
 - `shopware-revenue-report` -- `order:read`
 - `shopware-order-cancel` -- `order:read` (dry-run), plus `order:update`, `order_transaction:update`, `order_delivery:update` (commit)
-- `shopware-bestseller-report` -- `order:read`
+- `shopware-bestseller-report` -- `order:read`, `product:read`
 
 **System config tools:**
 - `shopware-system-config-read` -- `system_config:read`
@@ -22,7 +22,7 @@ Note: system config can contain sensitive values (SMTP credentials, payment API 
 
 **Storefront tools (Store API context + admin ACL):**
 - `shopware-cart-manage` -- `sales_channel:read`
-- `shopware-cart-checkout` -- `sales_channel:read`
+- `shopware-cart-checkout` -- `sales_channel:read`, `order:create`
 - `shopware-checkout-methods` -- `sales_channel:read`
 - `shopware-storefront-search` -- `sales_channel:read`
 
@@ -60,6 +60,8 @@ All write tools (`shopware-entity-upsert`, `shopware-entity-delete`, `shopware-s
 
 - Changes are validated and previewed but **not persisted**
 - For entity operations, a database transaction is opened, the operation runs, results are captured, then the transaction is rolled back
+- The context receives `SKIP_TRIGGER_FLOW` during dry-run to prevent Flow Builder actions from firing
+- Note: with Redis-based delayed cache invalidation, DAL writes may still enqueue invalidations that are not reverted by the DB rollback
 - The AI client must explicitly set `dryRun=false` to execute the operation
 
 ## App tool security

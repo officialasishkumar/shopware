@@ -11,6 +11,8 @@ All capability names must only contain `a-zA-Z0-9_-` (no dots) and should use a 
 
 This convention applies uniformly to tools, prompts, and resources. The restriction exists because the MCP SDK enforces `a-zA-Z0-9_-` for resource names, and we use a consistent pattern across all types.
 
+**Reserved prefix**: The `shopware-` prefix is reserved for core tools. App tools whose computed name (app name + tool name) starts with `shopware-` are silently skipped during loading and a warning is logged. This prevents apps from overriding built-in tools.
+
 ## How discovery works
 
 Two mechanisms work together to make plugin tools available:
@@ -178,20 +180,31 @@ class MyTool
 
 ### Error handling
 
-Unhandled exceptions in tool execution result in a generic MCP error (`-32603`). Wrap risky operations in try/catch and return structured error JSON instead:
+Unhandled exceptions in tool execution result in a generic MCP error (`-32603`). Use the `McpToolResponse` trait for structured error responses:
 
 ```php
-public function __invoke(string $entity): string
+use Shopware\Core\Framework\Mcp\Tool\McpToolResponse;
+
+#[McpTool(name: 'my-plugin-my-tool', description: '...')]
+class MyTool
 {
-    try {
-        // risky operation
-    } catch (\Throwable $e) {
-        return json_encode([
-            'error' => $e->getMessage(),
-        ], \JSON_THROW_ON_ERROR);
+    use McpToolResponse;
+
+    public function __invoke(string $entity): string
+    {
+        try {
+            // risky operation
+            return $this->success(['result' => $data]);
+        } catch (\Throwable $e) {
+            return $this->error($e->getMessage());
+        }
     }
 }
 ```
+
+The trait provides `$this->success(array $data, array $meta = [])` and `$this->error(string $message)` which produce consistent JSON envelopes. It also includes a 100 KB response size guard and `requirePrivilege()` for ACL checks.
+
+For write tools, the `executeWithDryRun()` helper catches exceptions automatically and returns them as `$this->error()` responses. It also adds `SKIP_TRIGGER_FLOW` to the context to prevent Flow Builder actions during preview.
 
 ## App capabilities
 
@@ -245,9 +258,25 @@ The timeout for all app webhook calls is configurable via `shopware.mcp.app_tool
 
 ### App webhook protocol
 
-When an AI client invokes a tool, requests a prompt, or reads a resource, Shopware sends a signed HTTP POST to the URL declared in `mcp.xml`. The request body contains the invocation arguments as JSON. The app server must respond with the result in the format the MCP SDK expects for that capability type.
+When an AI client invokes a tool, requests a prompt, or reads a resource, Shopware sends a signed HTTP POST to the URL declared in `mcp.xml`. The request body is JSON:
 
-Requests are signed using the app secret (HMAC-SHA256). Apps should verify the signature on every incoming request.
+```json
+{
+  "tool": "my-erp-sync-orders",
+  "arguments": { "since": "2025-01-01" },
+  "source": {
+    "url": "https://shop.example.com",
+    "shopId": "abc123def456",
+    "appVersion": "1.2.0"
+  }
+}
+```
+
+- `source.url` -- the shop's base URL
+- `source.shopId` -- unique shop identifier (from `ShopIdProvider`), useful for multi-tenant app backends
+- `source.appVersion` -- the installed version of the app, so the backend can handle version-specific behavior
+
+Requests are signed using the app secret (HMAC-SHA256). Apps should verify the `shopware-shop-signature` header on every incoming request.
 
 ### Locale resolution
 

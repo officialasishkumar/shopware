@@ -261,16 +261,14 @@ class ProductCreateToolTest extends TestCase
 
         $categoryRepo = static::createStub(EntityRepository::class);
         if ($categoryIds !== []) {
-            $responses = [];
-            foreach ($categoryIds as $catId) {
-                $responses[] = new IdSearchResult(
-                    1,
-                    [$catId => ['primaryKey' => $catId, 'data' => []]],
-                    new Criteria(),
-                    $context,
-                );
+            $ids = array_values($categoryIds);
+            $data = [];
+            foreach ($ids as $catId) {
+                $data[$catId] = ['primaryKey' => $catId, 'data' => []];
             }
-            $categoryRepo->method('searchIds')->willReturnOnConsecutiveCalls(...$responses);
+            $categoryRepo->method('searchIds')->willReturn(
+                new IdSearchResult(\count($ids), $data, new Criteria(), $context),
+            );
         } else {
             $categoryRepo->method('searchIds')->willReturn(
                 new IdSearchResult(0, [], new Criteria(), $context),

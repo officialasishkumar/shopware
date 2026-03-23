@@ -58,6 +58,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => null,
             'app_name' => 'my-app',
             'app_secret' => 'test-secret',
+            'version' => '0.0.0',
             'label' => 'Sync Orders',
             'description' => 'Syncs orders',
         ];
@@ -100,6 +101,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => $inputSchemaJson,
             'app_name' => 'my-app',
             'app_secret' => 'test-secret',
+            'version' => '0.0.0',
             'label' => 'Sync Orders',
             'description' => 'Syncs orders',
         ];
@@ -137,6 +139,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => null,
             'app_name' => 'my-app',
             'app_secret' => 'secret',
+            'version' => '0.0.0',
             'label' => 'Sync',
             'description' => 'Sync',
         ];
@@ -160,6 +163,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => null,
             'app_name' => 'my-app',
             'app_secret' => 'secret',
+            'version' => '0.0.0',
             'label' => 'Sync',
             'description' => 'Sync',
         ];
@@ -189,6 +193,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => 'not-valid-json',
             'app_name' => 'my-app',
             'app_secret' => 'secret',
+            'version' => '0.0.0',
             'label' => 'Broken',
             'description' => 'Broken tool',
         ];
@@ -219,6 +224,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => null,
             'app_name' => 'my-app',
             'app_secret' => 'secret',
+            'version' => '0.0.0',
             'label' => null,
             'description' => null,
         ];
@@ -249,6 +255,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => null,
             'app_name' => 'my-app',
             'app_secret' => 'test-secret',
+            'version' => '2.1.0',
             'label' => 'Sync Orders',
             'description' => 'Syncs orders',
         ];
@@ -257,7 +264,7 @@ class AppMcpToolLoaderTest extends TestCase
 
         $this->executor->expects($this->once())
             ->method('execute')
-            ->with('my-app-sync-orders', 'test-secret', 'https://app.example.com/mcp/sync', ['since' => '2025-01-01'])
+            ->with('my-app-sync-orders', 'test-secret', 'https://app.example.com/mcp/sync', ['since' => '2025-01-01'], '2.1.0')
             ->willReturn('{"success":true}');
 
         $capturedCallback = null;
@@ -287,6 +294,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => null,
             'app_name' => 'my-app',
             'app_secret' => 'test-secret',
+            'version' => '0.0.0',
             'label' => 'Sync Orders',
             'description' => 'Syncs orders',
         ];
@@ -295,7 +303,7 @@ class AppMcpToolLoaderTest extends TestCase
 
         $this->executor->expects($this->once())
             ->method('execute')
-            ->with('my-app-sync-orders', 'test-secret', 'https://app.example.com/mcp/sync', [])
+            ->with('my-app-sync-orders', 'test-secret', 'https://app.example.com/mcp/sync', [], '0.0.0')
             ->willReturn('{"success":true}');
 
         $capturedCallback = null;
@@ -325,6 +333,7 @@ class AppMcpToolLoaderTest extends TestCase
             'input_schema' => null,
             'app_name' => 'my-app',
             'app_secret' => 'secret',
+            'version' => '0.0.0',
             'label' => 'Sync',
             'description' => 'Sync',
         ];
@@ -338,5 +347,28 @@ class AppMcpToolLoaderTest extends TestCase
 
         $loader = new AppMcpToolLoader($this->connection, $this->executor, ['other-tool-only']);
         $loader->load($registry);
+    }
+
+    public function testLoadSkipsReservedShopwarePrefixedToolName(): void
+    {
+        $toolRow = [
+            'name' => 'orders',
+            'url' => 'https://app.example.com/mcp/sync',
+            'input_schema' => null,
+            'app_name' => 'shopware',
+            'app_secret' => 'secret',
+            'version' => '0.0.0',
+            'label' => 'Sync',
+            'description' => 'Sync',
+        ];
+
+        $this->connection->expects($this->once())
+            ->method('fetchAllAssociative')
+            ->willReturn([$toolRow]);
+
+        $registry = $this->createMock(RegistryInterface::class);
+        $registry->expects($this->never())->method('registerTool');
+
+        $this->loader->load($registry);
     }
 }
