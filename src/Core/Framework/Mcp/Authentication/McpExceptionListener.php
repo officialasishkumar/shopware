@@ -44,7 +44,13 @@ class McpExceptionListener implements EventSubscriberInterface
     {
         $request = $event->getRequest();
 
-        if ($request->getPathInfo() === self::OAUTH_FALLBACK_PATH) {
+        if ($request->attributes->get('_route') === self::MCP_ROUTE_NAME) {
+            $this->handleMcpException($event);
+
+            return;
+        }
+
+        if ($request->getPathInfo() === self::OAUTH_FALLBACK_PATH && str_contains($request->headers->get('Accept', ''), 'application/json')) {
             $event->setResponse(new JsonResponse([
                 'error' => 'invalid_client',
                 'error_description' => 'MCP endpoint is /api/_mcp. Provide sw-access-key and sw-secret-access-key headers.',
@@ -52,11 +58,10 @@ class McpExceptionListener implements EventSubscriberInterface
 
             return;
         }
+    }
 
-        if ($request->attributes->get('_route') !== self::MCP_ROUTE_NAME) {
-            return;
-        }
-
+    private function handleMcpException(ExceptionEvent $event): void
+    {
         $exception = $event->getThrowable();
         $httpCode = method_exists($exception, 'getStatusCode') ? $exception->getStatusCode() : 500;
 

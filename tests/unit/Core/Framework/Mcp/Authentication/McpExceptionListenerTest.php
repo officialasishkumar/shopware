@@ -30,11 +30,11 @@ class McpExceptionListenerTest extends TestCase
         static::assertSame(['onException', 10], $events[KernelEvents::EXCEPTION]);
     }
 
-    #[TestDox('returns OAuth error for /register fallback path')]
+    #[TestDox('returns OAuth error for /register fallback path with JSON accept header')]
     public function testHandlesOAuthFallbackPath(): void
     {
         $listener = new McpExceptionListener();
-        $event = $this->createExceptionEvent('/register', '', new \RuntimeException('some error'));
+        $event = $this->createExceptionEvent('/register', '', new \RuntimeException('some error'), ['Accept' => 'application/json']);
 
         $listener->onException($event);
 
@@ -45,6 +45,17 @@ class McpExceptionListenerTest extends TestCase
         $body = json_decode((string) $response->getContent(), true);
         static::assertSame('invalid_client', $body['error']);
         static::assertStringContainsString('/api/_mcp', $body['error_description']);
+    }
+
+    #[TestDox('ignores /register path without JSON accept header')]
+    public function testIgnoresRegisterWithoutJsonAccept(): void
+    {
+        $listener = new McpExceptionListener();
+        $event = $this->createExceptionEvent('/register', '', new \RuntimeException('some error'));
+
+        $listener->onException($event);
+
+        static::assertNull($event->getResponse());
     }
 
     #[TestDox('ignores exceptions on non-MCP routes')]
@@ -138,9 +149,17 @@ class McpExceptionListenerTest extends TestCase
         static::assertSame($expectedCode, $body['error']['code']);
     }
 
-    private function createExceptionEvent(string $pathInfo, string $routeName, \Throwable $throwable): ExceptionEvent
+    /**
+     * @param array<string, string> $headers
+     */
+    private function createExceptionEvent(string $pathInfo, string $routeName, \Throwable $throwable, array $headers = []): ExceptionEvent
     {
         $request = Request::create($pathInfo);
+
+        foreach ($headers as $key => $value) {
+            $request->headers->set($key, $value);
+        }
+
         $request->attributes->set('_route', $routeName);
 
         return new ExceptionEvent(
