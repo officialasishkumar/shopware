@@ -133,7 +133,7 @@ These capabilities are still primitive in nature, but they are write-capable and
 
 - `shopware-entity-upsert`
 - `shopware-entity-delete`
-- `shopware-state-machine-transition`
+- `shopware-order-state`
 - `shopware-system-config-read`
 - `shopware-system-config-write`
 
@@ -146,7 +146,6 @@ The following capabilities are the clearest plugin or bundle candidates because 
 - `shopware-order-summary` (currently in Core)
 - `shopware-customer-lookup` (currently in Core)
 - `shopware-product-create` (currently in Core)
-- `shopware-order-cancel` (currently in Core)
 - `shopware-revenue-report` (currently in Core)
 - `shopware-bestseller-report` (currently in Core)
 - `shopware-storefront-search` (currently in Core)
@@ -303,12 +302,11 @@ client connects to /api/_mcp (Streamable HTTP, authenticated)
 
 The following tools currently live in `src/Core/Framework/Mcp/Tool/` but should be moved to a plugin or bundle according to this decision. Each tool requires moving the class file, removing its DI registration from `mcp.php`, moving its unit test, and updating `McpCapabilityDiscoveryTest` expectations.
 
-### Tools to remove from core (11 files)
+### Tools to remove from core (10 files)
 
 | Tool class | MCP name | Category |
 |---|---|---|
 | `OrderSummaryTool` | `shopware-order-summary` | Workflow |
-| `OrderCancelTool` | `shopware-order-cancel` | Workflow |
 | `CustomerLookupTool` | `shopware-customer-lookup` | Workflow |
 | `ProductCreateTool` | `shopware-product-create` | Workflow |
 | `RevenueReportTool` | `shopware-revenue-report` | Reporting |
@@ -329,7 +327,7 @@ The following tools currently live in `src/Core/Framework/Mcp/Tool/` but should 
 | `EntityAggregateTool` | `shopware-entity-aggregate` |
 | `EntityUpsertTool` | `shopware-entity-upsert` |
 | `EntityDeleteTool` | `shopware-entity-delete` |
-| `StateMachineTransitionTool` | `shopware-state-machine-transition` |
+| `OrderStateTool` | `shopware-order-state` |
 | `SystemConfigReadTool` | `shopware-system-config-read` |
 | `SystemConfigWriteTool` | `shopware-system-config-write` |
 

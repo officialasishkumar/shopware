@@ -110,21 +110,19 @@ class AdminOperationsScenarioTest extends McpScenarioTestCase
 
         static::getContainer()->get('order.repository')->upsert([$order], Context::createDefaultContext());
 
-        $dryRunOutput = ($this->stateMachineTransitionTool)(
-            entityName: 'order_delivery',
-            entityId: $deliveryId,
-            actionName: 'ship',
+        $dryRunOutput = ($this->orderStateTool)(
+            orderNumber: $orderNumber,
+            deliveryAction: 'ship',
             dryRun: true,
         );
 
         $dryRunData = $this->decodeToolOutput($dryRunOutput);
         static::assertTrue($dryRunData['_meta']['dryRun']);
-        static::assertTrue($dryRunData['data']['actionValid']);
+        static::assertTrue($dryRunData['data']['deliveries'][0]['actionValid']);
 
-        $commitOutput = ($this->stateMachineTransitionTool)(
-            entityName: 'order_delivery',
-            entityId: $deliveryId,
-            actionName: 'ship',
+        $commitOutput = ($this->orderStateTool)(
+            orderNumber: $orderNumber,
+            deliveryAction: 'ship',
             dryRun: false,
         );
 
@@ -188,18 +186,24 @@ class AdminOperationsScenarioTest extends McpScenarioTestCase
 
         static::getContainer()->get('order.repository')->upsert([$order], $context);
 
-        $dryRunOutput = ($this->orderCancelTool)(
+        $dryRunOutput = ($this->orderStateTool)(
             orderNumber: $orderNumber,
+            orderAction: 'cancel',
+            transactionAction: 'cancel',
+            deliveryAction: 'cancel',
             dryRun: true,
         );
 
         $dryRunData = $this->decodeToolOutput($dryRunOutput);
         static::assertTrue($dryRunData['_meta']['dryRun']);
         static::assertSame('cancel', $dryRunData['data']['order']['action']);
-        static::assertFalse($dryRunData['data']['order']['executed']);
+        static::assertTrue($dryRunData['data']['order']['actionValid']);
 
-        $commitOutput = ($this->orderCancelTool)(
+        $commitOutput = ($this->orderStateTool)(
             orderNumber: $orderNumber,
+            orderAction: 'cancel',
+            transactionAction: 'cancel',
+            deliveryAction: 'cancel',
             dryRun: false,
         );
 

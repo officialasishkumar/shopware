@@ -112,7 +112,6 @@ All three entity read tools use `JsonEntityEncoder` for serialization (not the S
 - `EntityUpsertTool` (`shopware-entity-upsert`) -- create/update entities (dryRun wraps in transaction + rollback)
 - `EntityDeleteTool` (`shopware-entity-delete`) -- delete entities (dryRun shows cascade impact)
 - `SystemConfigWriteTool` (`shopware-system-config-write`) -- update configuration values
-- `StateMachineTransitionTool` (`shopware-state-machine-transition`) -- transition entity states
 - `MediaUploadTool` (`shopware-media-upload`) -- upload media from URL, optionally assign to product as cover image
 ## Outcome tools
 Outcome tools encapsulate common multi-step workflows into a single call with human-readable parameters:
@@ -120,7 +119,7 @@ Outcome tools encapsulate common multi-step workflows into a single call with hu
 - `CustomerLookupTool` (`shopware-customer-lookup`) -- look up a customer by email, customer number, or UUID with order history
 - `ProductCreateTool` (`shopware-product-create`) -- create a product with auto-resolution of tax, currency, and categories
 - `RevenueReportTool` (`shopware-revenue-report`) -- generate revenue reports with date range, aggregations, and timeline
-- `OrderCancelTool` (`shopware-order-cancel`) -- cancel an order with all transactions and deliveries in one call, with optional refund
+- `OrderStateTool` (`shopware-order-state`) -- change the state of an order, its transactions, and/or deliveries in one call
 - `BestsellerReportTool` (`shopware-bestseller-report`) -- top-selling products by quantity in a date range with revenue data
 
 ## Storefront tools

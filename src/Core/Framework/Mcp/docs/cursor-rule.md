@@ -56,9 +56,9 @@ Get field/association schema of an entity definition.
 Look up order by number or UUID.
 - **Optional**: `orderNumber` (string), `orderId` (string)
 
-### shopware-order-cancel
-Cancel order including transactions/deliveries. Always dryRun first.
-- **Optional**: `orderNumber` (string), `orderId` (string), `refundTransactions` (bool, default false), `dryRun` (bool, default true)
+### shopware-order-state
+Change order, transaction, and/or delivery state in one call. Always dryRun first.
+- **Optional**: `orderNumber` (string), `orderId` (string), `orderAction` (string), `transactionAction` (string), `deliveryAction` (string), `dryRun` (bool, default true)
 
 ### shopware-customer-lookup
 Look up customer by email, number, or UUID.
@@ -98,11 +98,6 @@ List payment/shipping methods for a sales channel.
 Search products with storefront context (resolved prices, visibility). Supports human-readable property filters.
 - **Required**: `salesChannelId` (string)
 - **Optional**: `criteria` (string JSON, default "{}"), `customerId` (string|null), `properties` (string JSON, e.g. '{"Color": "Red", "Size": "42"}'), `term` (string)
-
-### shopware-state-machine-transition
-Transition entity state machine. Always dryRun first.
-- **Required**: `entityName` (string), `entityId` (string), `actionName` (string)
-- **Optional**: `stateFieldName` (string, default "stateId"), `dryRun` (bool, default true)
 
 ### shopware-system-config-read
 Read system configuration values.

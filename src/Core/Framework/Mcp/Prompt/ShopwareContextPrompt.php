@@ -39,7 +39,7 @@ You are interacting with a Shopware 6 e-commerce platform via MCP tools.
 - Entity IDs are UUIDs (hex format, 32 chars). Always use lowercase without dashes.
 - The `shopware-entity-search` tool accepts criteria in the Admin API JSON format supporting: filter, sort, limit, page, associations, aggregations, includes, and fields.
 - Write operations (`shopware-entity-upsert`, `shopware-entity-delete`, `shopware-system-config-write`) default to dryRun=true. Always preview first.
-- State transitions (`shopware-state-machine-transition`) apply to orders, deliveries, and transactions.
+- State transitions (`shopware-order-state`) apply to orders, deliveries, and transactions. Use orderAction, transactionAction, deliveryAction parameters.
 - Media files can be uploaded from URLs via `shopware-media-upload`, with optional product assignment.
 - Theme configuration (colors, logos, fonts) can be read and updated via `shopware-theme-config` for a given sales channel.
 ## Common entity names
@@ -105,7 +105,7 @@ These tools simplify common multi-step workflows:
 
 ### Process an order
 1. `shopware-order-summary` to see current state, line items, and payment/delivery status
-2. `shopware-state-machine-transition` with dryRun=true to validate the transition
+2. `shopware-order-state` with the orderNumber and desired actions (orderAction, transactionAction, deliveryAction), dryRun=true to preview
 3. Set dryRun=false to execute
 
 ### Find customer orders

@@ -48,11 +48,10 @@ use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
 use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityUpsertTool;
 use Shopware\Core\Framework\Mcp\Tool\MediaUploadTool;
-use Shopware\Core\Framework\Mcp\Tool\OrderCancelTool;
+use Shopware\Core\Framework\Mcp\Tool\OrderStateTool;
 use Shopware\Core\Framework\Mcp\Tool\OrderSummaryTool;
 use Shopware\Core\Framework\Mcp\Tool\ProductCreateTool;
 use Shopware\Core\Framework\Mcp\Tool\RevenueReportTool;
-use Shopware\Core\Framework\Mcp\Tool\StateMachineTransitionTool;
 use Shopware\Core\Framework\Mcp\Tool\StorefrontSearchTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigReadTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigWriteTool;
@@ -184,14 +183,6 @@ return static function (ContainerConfigurator $container): void {
         ->tag('mcp.tool')
         ->tag('shopware.feature', ['flag' => 'MCP_SERVER']);
 
-    $services->set(StateMachineTransitionTool::class)
-        ->args([
-            service(StateMachineRegistry::class),
-            service(McpContextProvider::class),
-        ])
-        ->tag('mcp.tool')
-        ->tag('shopware.feature', ['flag' => 'MCP_SERVER']);
-
     $services->set(StorefrontSearchTool::class)
         ->args([
             service(SalesChannelContextService::class),
@@ -237,7 +228,7 @@ return static function (ContainerConfigurator $container): void {
         ->tag('mcp.tool')
         ->tag('shopware.feature', ['flag' => 'MCP_SERVER']);
 
-    $services->set(OrderCancelTool::class)
+    $services->set(OrderStateTool::class)
         ->args([
             service(DefinitionInstanceRegistry::class),
             service(McpContextProvider::class),

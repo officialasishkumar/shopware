@@ -3,8 +3,11 @@
 namespace Shopware\Core\Framework\Mcp\Tool;
 
 use Mcp\Capability\Attribute\McpTool;
+use Shopware\Core\Checkout\Order\Aggregate\OrderDelivery\OrderDeliveryDefinition;
 use Shopware\Core\Checkout\Order\Aggregate\OrderDelivery\OrderDeliveryEntity;
+use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionDefinition;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionEntity;
+use Shopware\Core\Checkout\Order\OrderDefinition;
 use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
@@ -18,9 +21,9 @@ use Shopware\Core\System\StateMachine\Transition;
 /**
  * @experimental stableVersion:v6.8.0 feature:MCP_SERVER
  */
-#[McpTool(name: 'shopware-order-cancel', description: 'Cancel an order including its transactions and deliveries in one call. Looks up the order by orderNumber or orderId, then cancels the order, refunds or cancels each transaction, and cancels each delivery. Always use dryRun=true (default) to preview before executing with dryRun=false. Set refundTransactions=true to refund paid transactions instead of cancelling them.')]
+#[McpTool(name: 'shopware-order-state', description: 'Change the state of an order, its transactions, and/or its deliveries in one call. Looks up the order by orderNumber or orderId. Provide at least one of orderAction, transactionAction, or deliveryAction. Common actions: cancel, process, complete, reopen, paid, refund, ship, retour. Always use dryRun=true (default) to preview available transitions before executing with dryRun=false. See shopware://state-machines resource for all valid states and transitions.')]
 #[Package('framework')]
-class OrderCancelTool
+class OrderStateTool
 {
     use McpToolResponse;
 
@@ -37,21 +40,38 @@ class OrderCancelTool
     public function __invoke(
         string $orderNumber = '',
         string $orderId = '',
-        bool $refundTransactions = false,
+        string $orderAction = '',
+        string $transactionAction = '',
+        string $deliveryAction = '',
         bool $dryRun = true,
     ): string {
         if ($orderNumber === '' && $orderId === '') {
             return $this->error('Provide either orderNumber or orderId.');
         }
 
+        if ($orderAction === '' && $transactionAction === '' && $deliveryAction === '') {
+            return $this->error('Provide at least one of orderAction, transactionAction, or deliveryAction.');
+        }
+
         $context = $this->contextProvider->getContext();
 
-        if ($error = $this->requirePrivilege($context, 'order:read')) {
+        if ($error = $this->requirePrivilege($context, OrderDefinition::ENTITY_NAME . ':read')) {
             return $error;
         }
 
         if (!$dryRun) {
-            if ($error = $this->requirePrivilege($context, 'order:update', 'order_transaction:update', 'order_delivery:update')) {
+            $writePrivileges = [];
+            if ($orderAction !== '') {
+                $writePrivileges[] = OrderDefinition::ENTITY_NAME . ':update';
+            }
+            if ($transactionAction !== '') {
+                $writePrivileges[] = OrderTransactionDefinition::ENTITY_NAME . ':update';
+            }
+            if ($deliveryAction !== '') {
+                $writePrivileges[] = OrderDeliveryDefinition::ENTITY_NAME . ':update';
+            }
+
+            if ($writePrivileges !== [] && ($error = $this->requirePrivilege($context, ...$writePrivileges))) {
                 return $error;
             }
         }
@@ -62,55 +82,60 @@ class OrderCancelTool
             return $this->error('Order not found.');
         }
 
-        $orderResult = $this->resolveTransition(
-            'order',
-            $order->getId(),
-            'cancel',
-            $order->getStateMachineState()?->getTechnicalName() ?? 'unknown',
-            $context,
-            $dryRun,
-        );
-
-        $transactionResults = $this->cancelTransactions($order, $refundTransactions, $context, $dryRun);
-        $deliveryResults = $this->cancelDeliveries($order, $context, $dryRun);
-
-        return $this->success([
+        $result = [
             'orderId' => $order->getId(),
             'orderNumber' => $order->getOrderNumber(),
-            'order' => $orderResult,
-            'transactions' => $transactionResults,
-            'deliveries' => $deliveryResults,
-        ], ['dryRun' => $dryRun]);
+        ];
+
+        if ($orderAction !== '') {
+            $result['order'] = $this->resolveTransition(
+                OrderDefinition::ENTITY_NAME,
+                $order->getId(),
+                $orderAction,
+                $order->getStateMachineState()?->getTechnicalName() ?? 'unknown',
+                $context,
+                $dryRun,
+            );
+        }
+
+        if ($transactionAction !== '') {
+            $result['transactions'] = $this->applyToTransactions($order, $transactionAction, $context, $dryRun);
+        }
+
+        if ($deliveryAction !== '') {
+            $result['deliveries'] = $this->applyToDeliveries($order, $deliveryAction, $context, $dryRun);
+        }
+
+        return $this->success($result, ['dryRun' => $dryRun]);
     }
 
     /**
-     * @return list<array{id: string, from: string, to: string, action: string, executed: bool, note?: string}>
+     * @return list<array<string, mixed>>
      */
-    private function cancelTransactions(OrderEntity $order, bool $refundTransactions, Context $context, bool $dryRun): array
+    private function applyToTransactions(OrderEntity $order, string $action, Context $context, bool $dryRun): array
     {
         $results = [];
         foreach ($order->getTransactions()?->getElements() ?? [] as $tx) {
             \assert($tx instanceof OrderTransactionEntity);
             $currentState = $tx->getStateMachineState()?->getTechnicalName() ?? 'unknown';
-            $action = $this->resolveTransactionAction($currentState, $refundTransactions);
 
-            $results[] = $this->resolveTransition('order_transaction', $tx->getId(), $action, $currentState, $context, $dryRun);
+            $results[] = $this->resolveTransition(OrderTransactionDefinition::ENTITY_NAME, $tx->getId(), $action, $currentState, $context, $dryRun);
         }
 
         return $results;
     }
 
     /**
-     * @return list<array{id: string, from: string, to: string, action: string, executed: bool, note?: string}>
+     * @return list<array<string, mixed>>
      */
-    private function cancelDeliveries(OrderEntity $order, Context $context, bool $dryRun): array
+    private function applyToDeliveries(OrderEntity $order, string $action, Context $context, bool $dryRun): array
     {
         $results = [];
         foreach ($order->getDeliveries()?->getElements() ?? [] as $delivery) {
             \assert($delivery instanceof OrderDeliveryEntity);
             $currentState = $delivery->getStateMachineState()?->getTechnicalName() ?? 'unknown';
 
-            $results[] = $this->resolveTransition('order_delivery', $delivery->getId(), 'cancel', $currentState, $context, $dryRun);
+            $results[] = $this->resolveTransition(OrderDeliveryDefinition::ENTITY_NAME, $delivery->getId(), $action, $currentState, $context, $dryRun);
         }
 
         return $results;
@@ -118,7 +143,7 @@ class OrderCancelTool
 
     private function loadOrder(string $orderId, string $orderNumber, Context $context): ?OrderEntity
     {
-        $repository = $this->registry->getRepository('order');
+        $repository = $this->registry->getRepository(OrderDefinition::ENTITY_NAME);
 
         $criteria = $orderId !== ''
             ? new Criteria([$orderId])
@@ -140,7 +165,7 @@ class OrderCancelTool
     }
 
     /**
-     * @return array{id: string, from: string, to: string, action: string, executed: bool, note?: string}
+     * @return array<string, mixed>
      */
     private function resolveTransition(
         string $entityName,
@@ -150,38 +175,36 @@ class OrderCancelTool
         Context $context,
         bool $dryRun,
     ): array {
-        $targetState = $this->getTargetState($action);
+        $availableTransitions = $this->getAvailableTransitions($entityName, $entityId, $context);
 
-        if ($currentState === $targetState) {
-            return [
-                'id' => $entityId,
-                'from' => $currentState,
-                'to' => $targetState,
-                'action' => $action,
-                'executed' => false,
-                'note' => 'Already in target state',
-            ];
-        }
+        $targetState = null;
+        $actionValid = false;
+        foreach ($availableTransitions as $t) {
+            if ($t['actionName'] === $action) {
+                $actionValid = true;
+                $targetState = $t['toStateName'];
 
-        if (!$this->isTransitionAvailable($entityName, $entityId, $action, $context)) {
-            return [
-                'id' => $entityId,
-                'from' => $currentState,
-                'to' => $targetState,
-                'action' => $action,
-                'executed' => false,
-                'note' => \sprintf('Transition "%s" not available from state "%s"', $action, $currentState),
-            ];
+                break;
+            }
         }
 
         if ($dryRun) {
             return [
                 'id' => $entityId,
                 'from' => $currentState,
-                'to' => $targetState,
+                'action' => $action,
+                'actionValid' => $actionValid,
+                'availableTransitions' => $availableTransitions,
+            ];
+        }
+
+        if (!$actionValid) {
+            return [
+                'id' => $entityId,
+                'from' => $currentState,
                 'action' => $action,
                 'executed' => false,
-                'note' => 'Will execute on commit',
+                'note' => \sprintf('Transition "%s" not available from state "%s"', $action, $currentState),
             ];
         }
 
@@ -197,38 +220,25 @@ class OrderCancelTool
         ];
     }
 
-    private function isTransitionAvailable(string $entityName, string $entityId, string $action, Context $context): bool
+    /**
+     * @return list<array{actionName: string, toStateName: string|null}>
+     */
+    private function getAvailableTransitions(string $entityName, string $entityId, Context $context): array
     {
         try {
             $transitions = $this->stateMachineRegistry->getAvailableTransitions($entityName, $entityId, 'stateId', $context);
         } catch (\Throwable) {
-            return false;
+            return [];
         }
 
+        $available = [];
         foreach ($transitions as $transition) {
-            if ($transition->getActionName() === $action) {
-                return true;
-            }
+            $available[] = [
+                'actionName' => $transition->getActionName(),
+                'toStateName' => $transition->getToStateMachineState()?->getTechnicalName(),
+            ];
         }
 
-        return false;
-    }
-
-    private function resolveTransactionAction(string $currentState, bool $refundTransactions): string
-    {
-        if ($refundTransactions && \in_array($currentState, ['paid', 'paid_partially'], true)) {
-            return 'refund';
-        }
-
-        return 'cancel';
-    }
-
-    private function getTargetState(string $action): string
-    {
-        return match ($action) {
-            'refund' => 'refunded',
-            'cancel' => 'cancelled',
-            default => $action,
-        };
+        return $available;
     }
 }

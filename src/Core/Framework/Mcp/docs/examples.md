@@ -102,8 +102,14 @@ Input: {
 
 **Transition order state (preview first):**
 ```
-Tool: shopware-state-machine-transition
-Input: {"entityName": "order", "entityId": "<uuid>", "actionName": "process", "dryRun": true}
+Tool: shopware-order-state
+Input: {"orderNumber": "10001", "orderAction": "process", "dryRun": true}
+```
+
+**Ship a delivery:**
+```
+Tool: shopware-order-state
+Input: {"orderNumber": "10001", "deliveryAction": "ship", "dryRun": false}
 ```
 
 ## Customer lookup
@@ -152,15 +158,15 @@ Input: {"from": "2025-01-01", "to": "2025-03-31", "groupBy": "week", "salesChann
 
 **Preview cancellation (dryRun):**
 ```
-Tool: shopware-order-cancel
-Input: {"orderNumber": "10001", "dryRun": true}
+Tool: shopware-order-state
+Input: {"orderNumber": "10001", "orderAction": "cancel", "transactionAction": "cancel", "deliveryAction": "cancel", "dryRun": true}
 ```
 Returns a preview of which transitions will execute for the order, its transactions, and deliveries.
 
-**Cancel and refund paid transactions:**
+**Cancel order, refund paid transactions:**
 ```
-Tool: shopware-order-cancel
-Input: {"orderNumber": "10001", "refundTransactions": true, "dryRun": false}
+Tool: shopware-order-state
+Input: {"orderNumber": "10001", "orderAction": "cancel", "transactionAction": "refund", "deliveryAction": "cancel", "dryRun": false}
 ```
 
 ## Bestseller reporting

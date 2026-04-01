@@ -14,7 +14,7 @@ Design tools around what the agent wants to achieve, not around raw CRUD operati
 
 Example: Creating a product in Shopware requires resolving a tax ID from a tax rate, a currency ID from an ISO code, and building a nested price array. Instead of making the agent do three lookups and construct the payload, `shopware-product-create` accepts `grossPrice: 29.99, taxRate: 19, currencyCode: "EUR"` and handles the rest.
 
-Similarly, `shopware-order-cancel` wraps order cancellation, transaction refund/cancel, and delivery cancellation into a single call with `orderNumber` and `refundTransactions` parameters, instead of requiring 3+ separate state-machine-transition calls.
+Similarly, `shopware-order-state` wraps order, transaction, and delivery state changes into a single call with `orderNumber` and per-entity action parameters, instead of requiring 3+ separate tool calls.
 
 **When to add an outcome tool:** If an agent needs 3+ tool calls to accomplish a single user intent, that workflow is a candidate for an outcome tool.
 
@@ -104,8 +104,8 @@ The tool descriptions (in `#[McpTool(...)]` attributes) explain what each tool d
 ```
 ### Process an order
 1. shopware-order-summary to see current state
-2. shopware-state-machine-transition with dryRun=true to validate
-3. shopware-state-machine-transition with dryRun=false to execute
+2. shopware-order-state with orderNumber and desired actions, dryRun=true to preview
+3. shopware-order-state with dryRun=false to execute
 ```
 
 Agents follow recipes better than they infer multi-step plans from individual tool docs.

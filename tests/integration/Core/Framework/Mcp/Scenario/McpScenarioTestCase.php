@@ -23,11 +23,10 @@ use Shopware\Core\Framework\Mcp\Tool\EntityReadTool;
 use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
 use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityUpsertTool;
-use Shopware\Core\Framework\Mcp\Tool\OrderCancelTool;
+use Shopware\Core\Framework\Mcp\Tool\OrderStateTool;
 use Shopware\Core\Framework\Mcp\Tool\OrderSummaryTool;
 use Shopware\Core\Framework\Mcp\Tool\ProductCreateTool;
 use Shopware\Core\Framework\Mcp\Tool\RevenueReportTool;
-use Shopware\Core\Framework\Mcp\Tool\StateMachineTransitionTool;
 use Shopware\Core\Framework\Mcp\Tool\StorefrontSearchTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigReadTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigWriteTool;
@@ -62,7 +61,7 @@ abstract class McpScenarioTestCase extends TestCase
 
     protected SystemConfigWriteTool $systemConfigWriteTool;
 
-    protected StateMachineTransitionTool $stateMachineTransitionTool;
+    protected OrderStateTool $orderStateTool;
 
     protected OrderSummaryTool $orderSummaryTool;
 
@@ -71,8 +70,6 @@ abstract class McpScenarioTestCase extends TestCase
     protected CustomerLookupTool $customerLookupTool;
 
     protected RevenueReportTool $revenueReportTool;
-
-    protected OrderCancelTool $orderCancelTool;
 
     protected BestsellerReportTool $bestsellerReportTool;
 
@@ -116,13 +113,12 @@ abstract class McpScenarioTestCase extends TestCase
 
         /** @var StateMachineRegistry $stateMachineRegistry */
         $stateMachineRegistry = $container->get(StateMachineRegistry::class);
-        $this->stateMachineTransitionTool = new StateMachineTransitionTool($stateMachineRegistry, $contextProvider);
+        $this->orderStateTool = new OrderStateTool($registry, $contextProvider, $stateMachineRegistry);
 
         $this->orderSummaryTool = new OrderSummaryTool($registry, $contextProvider);
         $this->customerLookupTool = new CustomerLookupTool($registry, $contextProvider);
         $this->productCreateTool = new ProductCreateTool($registry, $contextProvider);
         $this->revenueReportTool = new RevenueReportTool($registry, $contextProvider);
-        $this->orderCancelTool = new OrderCancelTool($registry, $contextProvider, $stateMachineRegistry);
         $this->bestsellerReportTool = new BestsellerReportTool($registry, $contextProvider);
 
         /** @var SalesChannelContextService $salesChannelContextService */

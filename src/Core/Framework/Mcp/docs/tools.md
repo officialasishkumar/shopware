@@ -140,15 +140,26 @@ Update a system configuration value. Shows before/after diff in dryRun mode.
 - `salesChannelId` (string, optional) -- Scope to a sales channel
 - `dryRun` (bool, default: `true`) -- Preview the diff
 
-### shopware-state-machine-transition
-Transition an entity's state machine state. See `shopware://state-machines` resource for valid states and transitions.
+### shopware-order-state
+Change the state of an order, its transactions, and/or its deliveries in one call. Looks up the order by order number or UUID. Provide at least one action. See `shopware://state-machines` resource for valid actions.
 
 **Parameters:**
-- `entityName` (string, required) -- Entity name (e.g., `order`, `order_delivery`, `order_transaction`)
-- `entityId` (string, required) -- Entity UUID
-- `actionName` (string, required) -- Transition action (e.g., `process`, `complete`, `cancel`, `refund`)
-- `stateFieldName` (string, default: `stateId`) -- State field name
-- `dryRun` (bool, default: `true`) -- Validate without executing
+- `orderNumber` (string, optional) -- Order number (e.g., "10001"). Mutually exclusive with `orderId`
+- `orderId` (string, optional) -- Order UUID. Mutually exclusive with `orderNumber`
+- `orderAction` (string, optional) -- Action for the order (e.g., `cancel`, `process`, `complete`, `reopen`)
+- `transactionAction` (string, optional) -- Action for all transactions (e.g., `cancel`, `paid`, `refund`, `reopen`)
+- `deliveryAction` (string, optional) -- Action for all deliveries (e.g., `cancel`, `ship`, `retour`, `reopen`)
+- `dryRun` (bool, default: `true`) -- Preview transitions and show available actions without executing
+
+At least one of `orderNumber` or `orderId` must be provided. At least one action must be provided.
+
+**Examples:**
+```json
+{"orderNumber": "10001", "orderAction": "cancel", "transactionAction": "cancel", "deliveryAction": "cancel", "dryRun": true}
+```
+```json
+{"orderNumber": "10001", "deliveryAction": "ship", "dryRun": false}
+```
 
 ---
 
@@ -217,22 +228,6 @@ Generate a revenue report for a date range. Excludes cancelled orders.
 **Example:**
 ```json
 {"from": "2025-03-01", "to": "2025-03-31", "groupBy": "week"}
-```
-
-### shopware-order-cancel
-Cancel an order including its transactions and deliveries in one call. Looks up the order, cancels the order state, refunds or cancels each transaction, and cancels each delivery. Defaults to `dryRun=true`.
-
-**Parameters:**
-- `orderNumber` (string, optional) -- Order number (e.g., "10001"). Mutually exclusive with `orderId`
-- `orderId` (string, optional) -- Order UUID. Mutually exclusive with `orderNumber`
-- `refundTransactions` (bool, default: `false`) -- If true, refund paid transactions instead of cancelling them
-- `dryRun` (bool, default: `true`) -- Preview transitions without executing
-
-At least one of `orderNumber` or `orderId` must be provided.
-
-**Example:**
-```json
-{"orderNumber": "10001", "refundTransactions": true, "dryRun": true}
 ```
 
 ### shopware-bestseller-report

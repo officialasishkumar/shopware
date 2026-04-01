@@ -28,11 +28,10 @@ use Shopware\Core\Framework\Mcp\Tool\EntityReadTool;
 use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityUpsertTool;
 use Shopware\Core\Framework\Mcp\Tool\McpToolResponse;
-use Shopware\Core\Framework\Mcp\Tool\OrderCancelTool;
+use Shopware\Core\Framework\Mcp\Tool\OrderStateTool;
 use Shopware\Core\Framework\Mcp\Tool\OrderSummaryTool;
 use Shopware\Core\Framework\Mcp\Tool\ProductCreateTool;
 use Shopware\Core\Framework\Mcp\Tool\RevenueReportTool;
-use Shopware\Core\Framework\Mcp\Tool\StateMachineTransitionTool;
 use Shopware\Core\Framework\Mcp\Tool\StorefrontSearchTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigReadTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigWriteTool;
@@ -124,15 +123,15 @@ class AclEnforcementTest extends TestCase
         $this->assertAclDenied(($tool)('10001'), 'order:read');
     }
 
-    public function testOrderCancelToolDenied(): void
+    public function testOrderStateToolDenied(): void
     {
-        $tool = new OrderCancelTool(
+        $tool = new OrderStateTool(
             $this->createMock(DefinitionInstanceRegistry::class),
             $this->createDeniedContextProvider(),
             $this->createMock(StateMachineRegistry::class),
         );
 
-        $this->assertAclDenied(($tool)('10001'), 'order:read');
+        $this->assertAclDenied(($tool)(orderNumber: '10001', orderAction: 'cancel'), 'order:read');
     }
 
     public function testCustomerLookupToolDenied(): void
@@ -173,16 +172,6 @@ class AclEnforcementTest extends TestCase
         );
 
         $this->assertAclDenied(($tool)('2025-01-01', '2025-12-31'), 'order:read');
-    }
-
-    public function testStateMachineTransitionToolDenied(): void
-    {
-        $tool = new StateMachineTransitionTool(
-            $this->createMock(StateMachineRegistry::class),
-            $this->createDeniedContextProvider(),
-        );
-
-        $this->assertAclDenied(($tool)('order', 'some-id', 'cancel'), 'order:read');
     }
 
     public function testCartManageToolDenied(): void

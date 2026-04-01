@@ -26,9 +26,9 @@ This document defines user stories that describe what an AI agent should be able
 - **US-4** [COVERED]: "Create a new product with price 29.99, tax rate 19%, and assign it to category 'Clothing'"
   - Tools: `shopware-product-create` with `name`, `productNumber`, `grossPrice`, `taxRate`, `categories`
 - **US-5** [COVERED]: "Ship order #12345 and send the customer a notification"
-  - Tools: `shopware-state-machine-transition` for the state change, `shopware-entity-search` on `flow` to verify notification flows exist
+  - Tools: `shopware-order-state` with `orderNumber` and `deliveryAction: "ship"`, `shopware-entity-search` on `flow` to verify notification flows exist
 - **US-6** [COVERED]: "Cancel all line items from order X and process the refund"
-  - Tools: `shopware-order-cancel` with `orderNumber` or `orderId`, optional `refundTransactions=true` for refunding paid transactions
+  - Tools: `shopware-order-state` with `orderNumber`, `orderAction: "cancel"`, `transactionAction: "refund"`, `deliveryAction: "cancel"`
 
 ## Category 3: Configuration
 

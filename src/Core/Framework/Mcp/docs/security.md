@@ -4,14 +4,14 @@
 The MCP endpoint at `/api/_mcp` is protected by Shopware's Admin API OAuth authentication. Every request must include a valid Bearer token or integration credentials (`sw-access-key` + `sw-secret-access-key` headers).
 
 ## ACL (Access Control)
-Entity tools (`entity-search`, `entity-read`, `entity-upsert`, `entity-delete`), `state-machine-transition`, and outcome tools (`order-summary`, `customer-lookup`, `product-create`, `revenue-report`) check the authenticated user's ACL permissions before executing. If the integration/user does not have the required privilege (e.g. `product:read`, `order:update`), the tool returns an error without touching the database. The `state-machine-transition` tool requires `{entity}:read` for dry-run and additionally `{entity}:update` for actual transitions.
+Entity tools (`entity-search`, `entity-read`, `entity-upsert`, `entity-delete`) and outcome tools (`order-summary`, `customer-lookup`, `product-create`, `revenue-report`, `order-state`) check the authenticated user's ACL permissions before executing. If the integration/user does not have the required privilege (e.g. `product:read`, `order:update`), the tool returns an error without touching the database.
 
 **ACL requirements for outcome tools:**
 - `shopware-order-summary` -- `order:read`
 - `shopware-customer-lookup` -- `customer:read`
 - `shopware-product-create` -- `product:create`, `product:read`, `tax:read`, `currency:read`
 - `shopware-revenue-report` -- `order:read`
-- `shopware-order-cancel` -- `order:read` (dry-run), plus `order:update`, `order_transaction:update`, `order_delivery:update` (commit)
+- `shopware-order-state` -- `order:read` (always), plus `order:update`, `order_transaction:update`, `order_delivery:update` as needed (commit only, per action provided)
 - `shopware-bestseller-report` -- `order:read`, `product:read`
 
 **System config tools:**
@@ -56,7 +56,7 @@ An empty list (default) means all tools are allowed. The allowlist is enforced a
 All capability names must only contain `a-zA-Z0-9_-` (no dots). Use a hyphen-separated prefix for namespacing (e.g., `my-plugin-my-tool`).
 
 ## Dry-run safety
-All write tools (`shopware-entity-upsert`, `shopware-entity-delete`, `shopware-system-config-write`, `shopware-state-machine-transition`) default to `dryRun=true`. This means:
+All write tools (`shopware-entity-upsert`, `shopware-entity-delete`, `shopware-system-config-write`, `shopware-order-state`) default to `dryRun=true`. This means:
 
 - Changes are validated and previewed but **not persisted**
 - For entity operations, a database transaction is opened, the operation runs, results are captured, then the transaction is rolled back

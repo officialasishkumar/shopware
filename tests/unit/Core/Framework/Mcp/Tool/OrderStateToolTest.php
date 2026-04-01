@@ -22,7 +22,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearchResult;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Context\McpContextProvider;
-use Shopware\Core\Framework\Mcp\Tool\OrderCancelTool;
+use Shopware\Core\Framework\Mcp\Tool\OrderStateTool;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\StateMachine\Aggregation\StateMachineState\StateMachineStateCollection;
 use Shopware\Core\System\StateMachine\Aggregation\StateMachineState\StateMachineStateEntity;
@@ -33,97 +33,52 @@ use Shopware\Core\System\StateMachine\StateMachineRegistry;
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(OrderCancelTool::class)]
-class OrderCancelToolTest extends TestCase
+#[CoversClass(OrderStateTool::class)]
+class OrderStateToolTest extends TestCase
 {
-    public function testDryRunReturnsPreviewWithCorrectTransitions(): void
+    public function testDryRunWithCancelAction(): void
     {
         $order = $this->buildOrder('open', 'open', 'open');
         $tool = $this->createTool($order, availableActions: ['cancel']);
 
-        $output = ($tool)(orderNumber: '10001', dryRun: true);
+        $output = ($tool)(orderNumber: '10001', orderAction: 'cancel', transactionAction: 'cancel', deliveryAction: 'cancel', dryRun: true);
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertTrue($data['success']);
         static::assertTrue($data['_meta']['dryRun']);
-
         static::assertSame('cancel', $data['data']['order']['action']);
-        static::assertFalse($data['data']['order']['executed']);
-        static::assertSame('Will execute on commit', $data['data']['order']['note']);
-
+        static::assertTrue($data['data']['order']['actionValid']);
         static::assertCount(1, $data['data']['transactions']);
-        static::assertSame('cancel', $data['data']['transactions'][0]['action']);
-        static::assertFalse($data['data']['transactions'][0]['executed']);
-
         static::assertCount(1, $data['data']['deliveries']);
-        static::assertSame('cancel', $data['data']['deliveries'][0]['action']);
-        static::assertFalse($data['data']['deliveries'][0]['executed']);
     }
 
-    public function testCommitExecutesAllTransitions(): void
+    public function testCommitWithProcessAndShip(): void
     {
         $order = $this->buildOrder('open', 'open', 'open');
-        $tool = $this->createTool($order, availableActions: ['cancel'], executeTransitions: true);
+        $tool = $this->createTool($order, availableActions: ['process', 'ship'], executeTransitions: true);
 
-        $output = ($tool)(orderNumber: '10001', dryRun: false);
+        $output = ($tool)(orderNumber: '10001', orderAction: 'process', deliveryAction: 'ship', dryRun: false);
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertTrue($data['success']);
         static::assertFalse($data['_meta']['dryRun']);
         static::assertTrue($data['data']['order']['executed']);
-        static::assertTrue($data['data']['transactions'][0]['executed']);
+        static::assertArrayNotHasKey('transactions', $data['data']);
         static::assertTrue($data['data']['deliveries'][0]['executed']);
     }
 
-    public function testAlreadyCancelledOrderReturnsNotExecuted(): void
-    {
-        $order = $this->buildOrder('cancelled', 'cancelled', 'cancelled');
-        $tool = $this->createTool($order, availableActions: []);
-
-        $output = ($tool)(orderNumber: '10001', dryRun: false);
-        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
-
-        static::assertTrue($data['success']);
-        static::assertFalse($data['data']['order']['executed']);
-        static::assertSame('Already in target state', $data['data']['order']['note']);
-        static::assertFalse($data['data']['transactions'][0]['executed']);
-        static::assertFalse($data['data']['deliveries'][0]['executed']);
-    }
-
-    public function testRefundTransactionsFlagUsesRefundActionForPaidState(): void
-    {
-        $order = $this->buildOrder('open', 'paid', 'open');
-        $tool = $this->createTool($order, availableActions: ['cancel', 'refund']);
-
-        $output = ($tool)(orderNumber: '10001', refundTransactions: true, dryRun: true);
-        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
-
-        static::assertTrue($data['success']);
-        static::assertSame('refund', $data['data']['transactions'][0]['action']);
-        static::assertSame('refunded', $data['data']['transactions'][0]['to']);
-    }
-
-    public function testRefundTransactionsFlagUsesCancelForOpenState(): void
+    public function testOnlyTransactionAction(): void
     {
         $order = $this->buildOrder('open', 'open', 'open');
-        $tool = $this->createTool($order, availableActions: ['cancel']);
+        $tool = $this->createTool($order, availableActions: ['paid'], executeTransitions: true);
 
-        $output = ($tool)(orderNumber: '10001', refundTransactions: true, dryRun: true);
-        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
-
-        static::assertSame('cancel', $data['data']['transactions'][0]['action']);
-    }
-
-    public function testRefundTransactionsFlagUsesCancelForAuthorizedState(): void
-    {
-        $order = $this->buildOrder('open', 'authorized', 'open');
-        $tool = $this->createTool($order, availableActions: ['cancel', 'refund']);
-
-        $output = ($tool)(orderNumber: '10001', refundTransactions: true, dryRun: true);
+        $output = ($tool)(orderNumber: '10001', transactionAction: 'paid', dryRun: false);
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertTrue($data['success']);
-        static::assertSame('cancel', $data['data']['transactions'][0]['action']);
+        static::assertArrayNotHasKey('order', $data['data']);
+        static::assertTrue($data['data']['transactions'][0]['executed']);
+        static::assertArrayNotHasKey('deliveries', $data['data']);
     }
 
     public function testTransitionNotAvailableReturnsNote(): void
@@ -131,7 +86,7 @@ class OrderCancelToolTest extends TestCase
         $order = $this->buildOrder('in_progress', 'open', 'open');
         $tool = $this->createTool($order, availableActions: []);
 
-        $output = ($tool)(orderNumber: '10001', dryRun: true);
+        $output = ($tool)(orderNumber: '10001', orderAction: 'cancel', dryRun: false);
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertTrue($data['success']);
@@ -139,17 +94,16 @@ class OrderCancelToolTest extends TestCase
         static::assertStringContainsString('not available', $data['data']['order']['note']);
     }
 
-    public function testGetAvailableTransitionsExceptionTreatsAsUnavailable(): void
+    public function testDryRunShowsAvailableTransitions(): void
     {
         $order = $this->buildOrder('open', 'open', 'open');
-        $tool = $this->createTool($order, availableActions: [], throwOnGetTransitions: true);
+        $tool = $this->createTool($order, availableActions: ['cancel', 'process']);
 
-        $output = ($tool)(orderNumber: '10001', dryRun: true);
+        $output = ($tool)(orderNumber: '10001', orderAction: 'cancel', dryRun: true);
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertTrue($data['success']);
-        static::assertFalse($data['data']['order']['executed']);
-        static::assertStringContainsString('not available', $data['data']['order']['note']);
+        static::assertCount(2, $data['data']['order']['availableTransitions']);
     }
 
     public function testDeniesWritePermissionOnCommit(): void
@@ -158,22 +112,10 @@ class OrderCancelToolTest extends TestCase
         $source->setPermissions(['order:read']);
         $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
 
-        $contextProvider = static::createStub(McpContextProvider::class);
-        $contextProvider->method('getContext')->willReturn($context);
-
         $order = $this->buildOrder('open', 'open', 'open');
-        $collection = new OrderCollection([$order]);
-        $result = new EntitySearchResult('order', 1, $collection, null, new Criteria(), $context);
+        $tool = $this->createToolWithContext($order, $context, availableActions: ['cancel']);
 
-        $repository = static::createStub(EntityRepository::class);
-        $repository->method('search')->willReturn($result);
-
-        $registry = static::createStub(DefinitionInstanceRegistry::class);
-        $registry->method('getRepository')->willReturn($repository);
-
-        $tool = new OrderCancelTool($registry, $contextProvider, static::createStub(StateMachineRegistry::class));
-        $output = ($tool)(orderNumber: '10001', dryRun: false);
-
+        $output = ($tool)(orderNumber: '10001', orderAction: 'cancel', dryRun: false);
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertFalse($data['success']);
@@ -192,8 +134,8 @@ class OrderCancelToolTest extends TestCase
         $contextProvider = static::createStub(McpContextProvider::class);
         $contextProvider->method('getContext')->willReturn($context);
 
-        $tool = new OrderCancelTool($registry, $contextProvider, static::createStub(StateMachineRegistry::class));
-        $output = ($tool)(orderNumber: '10001');
+        $tool = new OrderStateTool($registry, $contextProvider, static::createStub(StateMachineRegistry::class));
+        $output = ($tool)(orderNumber: '10001', orderAction: 'cancel');
 
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
@@ -201,23 +143,39 @@ class OrderCancelToolTest extends TestCase
         static::assertStringContainsString('order:read', $data['error']);
     }
 
+    public function testOnlyTransactionWritePrivilegeCheckedWhenOnlyTransactionAction(): void
+    {
+        $source = new AdminApiSource(null, null);
+        $source->setPermissions(['order:read', 'order_transaction:update']);
+        $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
+
+        $order = $this->buildOrder('open', 'open', 'open');
+        $tool = $this->createToolWithContext($order, $context, availableActions: ['paid'], executeTransitions: true);
+
+        $output = ($tool)(orderNumber: '10001', transactionAction: 'paid', dryRun: false);
+        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
+
+        static::assertTrue($data['success']);
+        static::assertTrue($data['data']['transactions'][0]['executed']);
+    }
+
     public function testOrderNotFoundReturnsError(): void
     {
         $tool = $this->createTool(null, availableActions: []);
 
-        $output = ($tool)(orderNumber: '99999');
+        $output = ($tool)(orderNumber: '99999', orderAction: 'cancel');
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertFalse($data['success']);
         static::assertSame('Order not found.', $data['error']);
     }
 
-    public function testLookupByOrderIdUsesIdCriteria(): void
+    public function testLookupByOrderId(): void
     {
         $order = $this->buildOrder('open', 'open', 'open');
         $tool = $this->createTool($order, availableActions: ['cancel']);
 
-        $output = ($tool)(orderId: $order->getId(), dryRun: true);
+        $output = ($tool)(orderId: $order->getId(), orderAction: 'cancel', dryRun: true);
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertTrue($data['success']);
@@ -228,11 +186,35 @@ class OrderCancelToolTest extends TestCase
     {
         $tool = $this->createTool(null, availableActions: []);
 
-        $output = ($tool)();
+        $output = ($tool)(orderAction: 'cancel');
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
 
         static::assertFalse($data['success']);
         static::assertStringContainsString('orderNumber or orderId', $data['error']);
+    }
+
+    public function testNoActionReturnsError(): void
+    {
+        $tool = $this->createTool(null, availableActions: []);
+
+        $output = ($tool)(orderNumber: '10001');
+        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
+
+        static::assertFalse($data['success']);
+        static::assertStringContainsString('orderAction, transactionAction, or deliveryAction', $data['error']);
+    }
+
+    public function testGetAvailableTransitionsExceptionTreatsAsEmpty(): void
+    {
+        $order = $this->buildOrder('open', 'open', 'open');
+        $tool = $this->createTool($order, availableActions: [], throwOnGetTransitions: true);
+
+        $output = ($tool)(orderNumber: '10001', orderAction: 'cancel', dryRun: true);
+        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
+
+        static::assertTrue($data['success']);
+        static::assertFalse($data['data']['order']['actionValid']);
+        static::assertSame([], $data['data']['order']['availableTransitions']);
     }
 
     /**
@@ -243,9 +225,20 @@ class OrderCancelToolTest extends TestCase
         array $availableActions,
         bool $executeTransitions = false,
         bool $throwOnGetTransitions = false,
-    ): OrderCancelTool {
-        $context = Context::createDefaultContext();
+    ): OrderStateTool {
+        return $this->createToolWithContext($order, Context::createDefaultContext(), $availableActions, $executeTransitions, $throwOnGetTransitions);
+    }
 
+    /**
+     * @param list<string> $availableActions
+     */
+    private function createToolWithContext(
+        ?OrderEntity $order,
+        Context $context,
+        array $availableActions,
+        bool $executeTransitions = false,
+        bool $throwOnGetTransitions = false,
+    ): OrderStateTool {
         $collection = new OrderCollection();
         if ($order !== null) {
             $collection->add($order);
@@ -274,6 +267,9 @@ class OrderCancelToolTest extends TestCase
                 $transition->setId(Uuid::randomHex());
                 $transition->setActionName($action);
                 $transition->setUniqueIdentifier(Uuid::randomHex());
+                $toState = new StateMachineStateEntity();
+                $toState->setTechnicalName($action . '_target');
+                $transition->setToStateMachineState($toState);
                 $transitions[] = $transition;
             }
 
@@ -285,7 +281,7 @@ class OrderCancelToolTest extends TestCase
             $stateMachineRegistry->method('transition')->willReturn($stateCollection);
         }
 
-        return new OrderCancelTool($registry, $contextProvider, $stateMachineRegistry);
+        return new OrderStateTool($registry, $contextProvider, $stateMachineRegistry);
     }
 
     private function buildOrder(string $orderState, string $transactionState, string $deliveryState): OrderEntity

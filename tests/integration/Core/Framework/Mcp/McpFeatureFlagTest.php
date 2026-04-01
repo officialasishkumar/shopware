@@ -33,11 +33,10 @@ use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
 use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
 use Shopware\Core\Framework\Mcp\Tool\EntityUpsertTool;
 use Shopware\Core\Framework\Mcp\Tool\MediaUploadTool;
-use Shopware\Core\Framework\Mcp\Tool\OrderCancelTool;
+use Shopware\Core\Framework\Mcp\Tool\OrderStateTool;
 use Shopware\Core\Framework\Mcp\Tool\OrderSummaryTool;
 use Shopware\Core\Framework\Mcp\Tool\ProductCreateTool;
 use Shopware\Core\Framework\Mcp\Tool\RevenueReportTool;
-use Shopware\Core\Framework\Mcp\Tool\StateMachineTransitionTool;
 use Shopware\Core\Framework\Mcp\Tool\StorefrontSearchTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigReadTool;
 use Shopware\Core\Framework\Mcp\Tool\SystemConfigWriteTool;
@@ -70,13 +69,12 @@ class McpFeatureFlagTest extends TestCase
             [EntityDeleteTool::class],
             [SystemConfigReadTool::class],
             [SystemConfigWriteTool::class],
-            [StateMachineTransitionTool::class],
+            [OrderStateTool::class],
             [StorefrontSearchTool::class],
             [OrderSummaryTool::class],
             [CustomerLookupTool::class],
             [ProductCreateTool::class],
             [RevenueReportTool::class],
-            [OrderCancelTool::class],
             [BestsellerReportTool::class],
             [CartManageTool::class],
             [CartCheckoutTool::class],
