@@ -97,17 +97,20 @@ trait McpToolResponse
         $connection->beginTransaction();
 
         try {
-            return $operation();
+            $result = $operation();
         } catch (\Throwable $e) {
-            return $this->error($e->getMessage());
-        } finally {
-            $context->removeState(Context::SKIP_TRIGGER_FLOW);
-
-            try {
-                $connection->rollBack();
-            } catch (\Throwable) {
-            }
+            $result = $this->error($e->getMessage());
         }
+
+        $context->removeState(Context::SKIP_TRIGGER_FLOW);
+
+        try {
+            $connection->rollBack();
+        } catch (\Throwable $rollbackException) {
+            return $this->error(\sprintf('Dry-run rollback failed: data may have been persisted. %s', $rollbackException->getMessage()));
+        }
+
+        return $result;
     }
 
     /**

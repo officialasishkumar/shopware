@@ -51,17 +51,17 @@ class CartManageTool
             return $this->error(\sprintf('Invalid action "%s". Must be one of: %s', $action, implode(', ', array_column(CartAction::cases(), 'value'))));
         }
 
-        if ($action !== 'create' && $token === '') {
+        if ($cartAction !== CartAction::Create && $token === '') {
             return $this->error('Token is required for action "' . $action . '". Use action "create" first to get a token.');
         }
 
         try {
-            return match ($action) {
-                'create' => $this->handleCreate($salesChannelId, $customerId),
-                'add' => $this->handleAdd($salesChannelId, $token, $productId, $quantity, $customerId),
-                'remove' => $this->handleRemove($salesChannelId, $token, $lineItemId, $customerId),
-                'update' => $this->handleUpdate($salesChannelId, $token, $lineItemId, $quantity, $customerId),
-                'get' => $this->handleGet($salesChannelId, $token, $customerId),
+            return match ($cartAction) {
+                CartAction::Create => $this->handleCreate($salesChannelId, $customerId),
+                CartAction::Add => $this->handleAdd($salesChannelId, $token, $productId, $quantity, $customerId),
+                CartAction::Remove => $this->handleRemove($salesChannelId, $token, $lineItemId, $customerId),
+                CartAction::Update => $this->handleUpdate($salesChannelId, $token, $lineItemId, $quantity, $customerId),
+                CartAction::Get => $this->handleGet($salesChannelId, $token, $customerId),
             };
         } catch (\Throwable $e) {
             return $this->error($e->getMessage());

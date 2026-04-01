@@ -113,7 +113,7 @@ class McpToolResponseConventionTest extends TestCase
         static::assertArrayHasKey('truncatedMessage', $result['_meta']);
     }
 
-    public function testDryRunSwallowsRollBackException(): void
+    public function testDryRunReturnsErrorOnRollbackFailure(): void
     {
         $connection = static::createStub(Connection::class);
         $connection->method('rollBack')->willThrowException(new \RuntimeException('rollback failed'));
@@ -123,7 +123,9 @@ class McpToolResponseConventionTest extends TestCase
         $helper = new McpToolResponseTestHelper();
         $result = json_decode($helper->callDryRun($connection, $context, fn () => '{"success":true}'), true, 512, \JSON_THROW_ON_ERROR);
 
-        static::assertTrue($result['success']);
+        static::assertFalse($result['success']);
+        static::assertStringContainsString('Dry-run rollback failed', $result['error']);
+        static::assertStringContainsString('rollback failed', $result['error']);
     }
 
     public function testOversizedAssocResponseStillTooLargeClearsData(): void

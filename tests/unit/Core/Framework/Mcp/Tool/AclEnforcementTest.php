@@ -13,6 +13,7 @@ use Shopware\Core\Framework\Api\Context\AdminApiSource;
 use Shopware\Core\Framework\Api\Serializer\JsonEntityEncoder;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\RequestCriteriaBuilder;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Context\McpContextProvider;
@@ -244,6 +245,47 @@ class AclEnforcementTest extends TestCase
         $this->assertAclDenied(($tool)('sc-1'), 'sales_channel:read');
     }
 
+    public function testSystemConfigReadToolAllowed(): void
+    {
+        $configService = $this->createMock(SystemConfigService::class);
+        $configService->method('get')->willReturn('test-value');
+
+        $tool = new SystemConfigReadTool(
+            $configService,
+            $this->createAllowedContextProvider('system_config:read'),
+        );
+
+        $this->assertAclAllowed(($tool)('core.listing.defaultSorting'));
+    }
+
+    public function testSystemConfigWriteToolAllowed(): void
+    {
+        $configService = $this->createMock(SystemConfigService::class);
+        $configService->method('get')->willReturn('old-value');
+
+        $tool = new SystemConfigWriteTool(
+            $configService,
+            $this->createAllowedContextProvider('system_config:update'),
+        );
+
+        $this->assertAclAllowed(($tool)('core.test', '"new-value"'));
+    }
+
+    public function testEntityDeleteToolAllowed(): void
+    {
+        $registry = $this->createMock(DefinitionInstanceRegistry::class);
+        $registry->method('has')->willReturn(true);
+        $registry->method('getRepository')->willReturn($this->createMock(EntityRepository::class));
+
+        $tool = new EntityDeleteTool(
+            $registry,
+            $this->createAllowedContextProvider('product:delete'),
+            $this->createMock(Connection::class),
+        );
+
+        $this->assertAclAllowed(($tool)('product', 'some-id'));
+    }
+
     private function createRegistryWithEntity(): DefinitionInstanceRegistry
     {
         $registry = $this->createMock(DefinitionInstanceRegistry::class);
@@ -264,11 +306,29 @@ class AclEnforcementTest extends TestCase
         return $provider;
     }
 
+    private function createAllowedContextProvider(string ...$permissions): McpContextProvider
+    {
+        $source = new AdminApiSource(null, null);
+        $source->setPermissions($permissions);
+        $context = new Context($source, [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
+
+        $provider = $this->createMock(McpContextProvider::class);
+        $provider->method('getContext')->willReturn($context);
+
+        return $provider;
+    }
+
     private function assertAclDenied(string $output, string $expectedPrivilege): void
     {
         $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
         static::assertFalse($data['success']);
         static::assertStringContainsString('Missing privilege', $data['error']);
         static::assertStringContainsString($expectedPrivilege, $data['error']);
+    }
+
+    private function assertAclAllowed(string $output): void
+    {
+        $data = json_decode($output, true, 512, \JSON_THROW_ON_ERROR);
+        static::assertTrue($data['success'], 'Tool should succeed when ACL permissions are granted, got: ' . $output);
     }
 }
