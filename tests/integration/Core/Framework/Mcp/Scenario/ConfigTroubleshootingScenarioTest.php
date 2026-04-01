@@ -2,22 +2,13 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\EntityReadTool;
-use Shopware\Core\Framework\Mcp\Tool\EntityUpsertTool;
-use Shopware\Core\Framework\Mcp\Tool\SystemConfigReadTool;
-use Shopware\Core\Framework\Mcp\Tool\SystemConfigWriteTool;
 use Shopware\Core\Test\TestDefaults;
 
 /**
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(SystemConfigReadTool::class)]
-#[CoversClass(SystemConfigWriteTool::class)]
-#[CoversClass(EntityUpsertTool::class)]
-#[CoversClass(EntityReadTool::class)]
 class ConfigTroubleshootingScenarioTest extends McpScenarioTestCase
 {
     public function testUS7ReadListingConfig(): void

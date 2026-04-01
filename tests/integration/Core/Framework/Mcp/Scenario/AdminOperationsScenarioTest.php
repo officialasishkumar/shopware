@@ -2,15 +2,10 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Shopware\Core\Checkout\Order\Aggregate\OrderDelivery\OrderDeliveryStates;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\EntityReadTool;
-use Shopware\Core\Framework\Mcp\Tool\OrderCancelTool;
-use Shopware\Core\Framework\Mcp\Tool\ProductCreateTool;
-use Shopware\Core\Framework\Mcp\Tool\StateMachineTransitionTool;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Test\Integration\Builder\Customer\CustomerBuilder;
 use Shopware\Core\Test\Integration\Builder\Order\OrderBuilder;
@@ -21,10 +16,6 @@ use Shopware\Core\Test\TestDefaults;
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(ProductCreateTool::class)]
-#[CoversClass(StateMachineTransitionTool::class)]
-#[CoversClass(EntityReadTool::class)]
-#[CoversClass(OrderCancelTool::class)]
 class AdminOperationsScenarioTest extends McpScenarioTestCase
 {
     public function testUS4ProductCreateDryRun(): void

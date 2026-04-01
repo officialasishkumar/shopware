@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\DependencyInjection\CompilerPass\McpToolCompilerPass;
 use Shopware\Core\Framework\DependencyInjection\DependencyInjectionException;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Mcp\Tool\McpToolResponse;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
@@ -258,6 +259,8 @@ class McpToolCompilerPassTest extends TestCase
 #[McpTool(name: 'shopware-core-tool', description: 'test core tool')]
 class McpToolCompilerPassTestCoreTool
 {
+    use McpToolResponse;
+
     public function __invoke(): string
     {
         return '';
@@ -270,6 +273,8 @@ class McpToolCompilerPassTestCoreTool
 #[McpTool(name: 'my-plugin-namespaced-tool', description: 'test namespaced tool')]
 class McpToolCompilerPassTestNamespacedTool
 {
+    use McpToolResponse;
+
     public function __invoke(): string
     {
         return '';

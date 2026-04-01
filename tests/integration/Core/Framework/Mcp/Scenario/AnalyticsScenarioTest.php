@@ -2,12 +2,9 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\BestsellerReportTool;
-use Shopware\Core\Framework\Mcp\Tool\RevenueReportTool;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Test\Integration\Builder\Customer\CustomerBuilder;
 use Shopware\Core\Test\Integration\Builder\Order\OrderBuilder;
@@ -18,8 +15,6 @@ use Shopware\Core\Test\TestDefaults;
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(RevenueReportTool::class)]
-#[CoversClass(BestsellerReportTool::class)]
 class AnalyticsScenarioTest extends McpScenarioTestCase
 {
     public function testUS14RevenueReport(): void

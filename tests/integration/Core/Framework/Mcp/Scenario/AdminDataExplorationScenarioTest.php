@@ -2,16 +2,10 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Shopware\Core\Content\Test\Product\ProductBuilder;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
-use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
-use Shopware\Core\Framework\Mcp\Tool\McpEntityIncludes;
-use Shopware\Core\Framework\Mcp\Tool\McpToolResponse;
-use Shopware\Core\Framework\Mcp\Tool\OrderSummaryTool;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Test\Integration\Builder\Customer\CustomerBuilder;
 use Shopware\Core\Test\Integration\Builder\Order\OrderBuilder;
@@ -22,11 +16,6 @@ use Shopware\Core\Test\TestDefaults;
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(OrderSummaryTool::class)]
-#[CoversClass(EntitySearchTool::class)]
-#[CoversClass(EntitySchemaTool::class)]
-#[CoversClass(McpEntityIncludes::class)]
-#[CoversClass(McpToolResponse::class)]
 class AdminDataExplorationScenarioTest extends McpScenarioTestCase
 {
     public function testUS1OrderSummaryByOrderNumber(): void

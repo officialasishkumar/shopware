@@ -2,15 +2,9 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Shopware\Core\Content\Test\Product\ProductBuilder;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\CartCheckoutTool;
-use Shopware\Core\Framework\Mcp\Tool\CartManageTool;
-use Shopware\Core\Framework\Mcp\Tool\CheckoutMethodsTool;
-use Shopware\Core\Framework\Mcp\Tool\CustomerLookupTool;
-use Shopware\Core\Framework\Mcp\Tool\StorefrontSearchTool;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Test\Integration\Builder\Customer\CustomerBuilder;
 use Shopware\Core\Test\Stub\Framework\IdsCollection;
@@ -20,11 +14,6 @@ use Shopware\Core\Test\TestDefaults;
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(CartManageTool::class)]
-#[CoversClass(CartCheckoutTool::class)]
-#[CoversClass(CheckoutMethodsTool::class)]
-#[CoversClass(CustomerLookupTool::class)]
-#[CoversClass(StorefrontSearchTool::class)]
 class StorefrontScenarioTest extends McpScenarioTestCase
 {
     public function testUS10PropertySearch(): void

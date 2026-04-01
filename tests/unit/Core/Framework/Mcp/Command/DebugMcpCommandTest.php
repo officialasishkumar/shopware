@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Command\DebugMcpCommand;
 use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
+use Shopware\Core\Framework\Mcp\Tool\McpToolResponse;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
@@ -49,6 +50,7 @@ class DebugMcpCommandTest extends TestCase
     public function testOutputsTableRowsForItemsWithMcpAttributes(): void
     {
         $toolWithAttr = new #[McpTool(name: 'test-tool', description: 'A test tool')] class {
+            use McpToolResponse;
         };
 
         $command = new DebugMcpCommand([$toolWithAttr], [], []);

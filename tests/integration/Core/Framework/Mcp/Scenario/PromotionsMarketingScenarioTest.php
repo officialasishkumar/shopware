@@ -2,19 +2,14 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\EntityAggregateTool;
-use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
 use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(EntitySearchTool::class)]
-#[CoversClass(EntityAggregateTool::class)]
 class PromotionsMarketingScenarioTest extends McpScenarioTestCase
 {
     public function testUS20ActivePromotions(): void

@@ -2,14 +2,10 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Shopware\Core\Content\Test\Product\ProductBuilder;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\EntityReadTool;
-use Shopware\Core\Framework\Mcp\Tool\EntitySearchTool;
-use Shopware\Core\Framework\Mcp\Tool\EntityUpsertTool;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Test\Stub\Framework\IdsCollection;
 use Shopware\Core\Test\TestDefaults;
@@ -18,9 +14,6 @@ use Shopware\Core\Test\TestDefaults;
  * @internal
  */
 #[Package('framework')]
-#[CoversClass(EntityReadTool::class)]
-#[CoversClass(EntitySearchTool::class)]
-#[CoversClass(EntityUpsertTool::class)]
 class ProductContentScenarioTest extends McpScenarioTestCase
 {
     public function testUS22ProductsWithoutMedia(): void

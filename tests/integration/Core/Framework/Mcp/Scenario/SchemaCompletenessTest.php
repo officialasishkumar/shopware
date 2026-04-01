@@ -2,10 +2,8 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Mcp\Scenario;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
 
 /**
  * @internal
@@ -14,7 +12,6 @@ use Shopware\Core\Framework\Mcp\Tool\EntitySchemaTool;
  * that the MCP user stories depend on. Catches silent renames or removals.
  */
 #[Package('framework')]
-#[CoversClass(EntitySchemaTool::class)]
 class SchemaCompletenessTest extends McpScenarioTestCase
 {
     /**

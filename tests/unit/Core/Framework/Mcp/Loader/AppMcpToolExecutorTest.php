@@ -158,9 +158,12 @@ class AppMcpToolExecutorTest extends TestCase
 
         $lastRequest = $this->mockHandler->getLastRequest();
         static::assertNotNull($lastRequest);
+
+        $body = $lastRequest->getBody()->getContents();
+        $expectedSignature = hash_hmac('sha256', $body, 'secret');
+
         $signature = $lastRequest->getHeaderLine(RequestSigner::SHOPWARE_SHOP_SIGNATURE);
-        static::assertNotEmpty($signature);
-        static::assertSame(64, \strlen($signature));
+        static::assertSame($expectedSignature, $signature);
     }
 
     private function createShopIdProvider(): ShopIdProvider

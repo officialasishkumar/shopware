@@ -3,7 +3,6 @@
 namespace Shopware\Tests\Unit\Core\Framework\Mcp\Tool;
 
 use Doctrine\DBAL\Connection;
-use Mcp\Capability\Attribute\McpTool;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Defaults;
@@ -11,7 +10,6 @@ use Shopware\Core\Framework\Api\Context\AdminApiSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Tool\McpToolResponse;
-use Symfony\Component\Finder\Finder;
 
 /**
  * @internal
@@ -20,54 +18,6 @@ use Symfony\Component\Finder\Finder;
 #[CoversClass(McpToolResponse::class)]
 class McpToolResponseConventionTest extends TestCase
 {
-    public function testAllMcpToolsUseResponseTrait(): void
-    {
-        $srcDir = \dirname(__DIR__, 6) . '/src';
-
-        $finder = (new Finder())
-            ->files()
-            ->in($srcDir)
-            ->path('/Mcp\/Tool\//')
-            ->name('*Tool.php')
-            ->notName('McpToolResponse.php')
-            ->notName('McpTool.php');
-
-        $violations = [];
-
-        foreach ($finder as $file) {
-            // Derive namespace from path: src/Foo/Bar/Mcp/Tool/MyTool.php -> Shopware\Foo\Bar\Mcp\Tool\MyTool
-            $relative = str_replace('/', '\\', $file->getRelativePathname());
-            $className = 'Shopware\\' . substr($relative, 0, -4);
-
-            if (!class_exists($className)) {
-                continue;
-            }
-
-            $ref = new \ReflectionClass($className);
-
-            $hasMcpToolAttribute = $ref->getAttributes(McpTool::class) !== [];
-
-            if (!$hasMcpToolAttribute) {
-                continue;
-            }
-
-            $usesTrait = \in_array(McpToolResponse::class, $ref->getTraitNames(), true);
-
-            if (!$usesTrait) {
-                $violations[] = $className;
-            }
-        }
-
-        static::assertSame(
-            [],
-            $violations,
-            \sprintf(
-                "The following MCP tools do not use the McpToolResponse trait:\n- %s",
-                implode("\n- ", $violations)
-            )
-        );
-    }
-
     public function testSuccessWithoutMetaOmitsMetaKey(): void
     {
         $helper = new McpToolResponseTestHelper();
