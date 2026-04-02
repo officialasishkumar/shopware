@@ -6,6 +6,35 @@ import { mount } from '@vue/test-utils';
 import ShopwareError from 'src/core/data/ShopwareError';
 
 async function createWrapper(additionalOptions = {}) {
+    const {
+        global: globalOptions = {},
+        ...mountOptions
+    } = additionalOptions;
+
+    const defaultGlobal = {
+        stubs: {
+            'mt-text-field': {
+                template: '<div class="sw-text-field"><slot name="label"></slot><slot></slot></div>',
+            },
+            'sw-contextual-field': true,
+            'sw-block-field': true,
+            'sw-base-field': true,
+            'sw-field-error': true,
+        },
+        provide: {
+            validationService: {},
+            repositoryFactory: {
+                create() {
+                    return {
+                        get() {
+                            return Promise.resolve({});
+                        },
+                    };
+                },
+            },
+        },
+    };
+
     return mount(
         await wrapTestComponent('sw-form-field-renderer', {
             sync: true,
@@ -20,29 +49,18 @@ async function createWrapper(additionalOptions = {}) {
                 value: 'data value',
             },
             global: {
+                ...defaultGlobal,
+                ...globalOptions,
                 stubs: {
-                    'mt-text-field': {
-                        template: '<div class="sw-text-field"><slot name="label"></slot><slot></slot></div>',
-                    },
-                    'sw-contextual-field': true,
-                    'sw-block-field': true,
-                    'sw-base-field': true,
-                    'sw-field-error': true,
+                    ...defaultGlobal.stubs,
+                    ...globalOptions.stubs,
                 },
                 provide: {
-                    validationService: {},
-                    repositoryFactory: {
-                        create() {
-                            return {
-                                get() {
-                                    return Promise.resolve({});
-                                },
-                            };
-                        },
-                    },
+                    ...defaultGlobal.provide,
+                    ...globalOptions.provide,
                 },
             },
-            ...additionalOptions,
+            ...mountOptions,
         },
     );
 }
@@ -110,6 +128,34 @@ describe('components/form/sw-form-field-renderer', () => {
                 }),
             ]),
         );
+
+        expect(wrapper.emitted('update:value')).toBeUndefined();
+    });
+
+    it('should not emit update event when sw-price-field sends its initial unchanged value', async () => {
+        const wrapper = await createWrapper({
+            props: {
+                type: 'price',
+                config: {
+                    customFieldType: 'price',
+                },
+                value: undefined,
+            },
+            global: {
+                stubs: {
+                    'sw-price-field': {
+                        template: '<div class="sw-price-field"></div>',
+                        props: ['value'],
+                        emits: ['update:value'],
+                        mounted() {
+                            this.$emit('update:value', this.value);
+                        },
+                    },
+                },
+            },
+        });
+
+        await flushPromises();
 
         expect(wrapper.emitted('update:value')).toBeUndefined();
     });
