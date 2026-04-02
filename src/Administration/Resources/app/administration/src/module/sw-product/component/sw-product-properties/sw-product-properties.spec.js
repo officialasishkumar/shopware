@@ -143,6 +143,29 @@ async function createWrapper() {
                         </div>
                     `,
                 },
+                'mt-empty-state': {
+                    props: ['headline', 'description'],
+                    template: `
+                        <div class="mt-empty-state">
+                            <div class="mt-empty-state__headline">{{ headline }}</div>
+                            <div
+                                v-if="description"
+                                class="mt-empty-state__description"
+                            >
+                                {{ description }}
+                            </div>
+                            <slot name="button"></slot>
+                        </div>
+                    `,
+                },
+                'mt-button': {
+                    props: ['disabled'],
+                    template: `
+                        <button :disabled="disabled">
+                            <slot></slot>
+                        </button>
+                    `,
+                },
                 'sw-entity-listing': {
                     props: ['items'],
                     methods: {
@@ -658,5 +681,33 @@ describe('src/module/sw-product/component/sw-product-properties', () => {
 
         expect(wrapper.vm.turnOffAddPropertiesModal).toHaveBeenCalledTimes(1);
         expect(callbackUpdateCurrentValuesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should render custom empty-state copy when provided', async () => {
+        global.activeAclRoles = [];
+
+        const wrapper = await createWrapper();
+        await flushPromises();
+
+        Store.get('swProductDetail').product = {
+            ...productMock,
+            properties: [],
+        };
+        Store.get('swProductDetail').parentProduct = {
+            ...parentProductMock,
+            properties: [],
+        };
+
+        await wrapper.setProps({
+            emptyStateTitle: 'bulk-edit.emptyStateTitle',
+            emptyStateDescription: 'bulk-edit.emptyStateDescription',
+        });
+
+        await wrapper.vm.getGroupIds();
+        await wrapper.vm.getProperties();
+        await flushPromises();
+
+        expect(wrapper.find('.mt-empty-state__headline').text()).toBe('bulk-edit.emptyStateTitle');
+        expect(wrapper.find('.mt-empty-state__description').text()).toBe('bulk-edit.emptyStateDescription');
     });
 });
