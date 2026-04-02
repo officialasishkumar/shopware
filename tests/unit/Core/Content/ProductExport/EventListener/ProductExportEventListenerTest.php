@@ -44,6 +44,8 @@ class ProductExportEventListenerTest extends TestCase
                 return ($first['id'] ?? null) === $id
                     && \array_key_exists('generatedAt', $first)
                     && $first['generatedAt'] === null
+                    && \array_key_exists('nextGenerationAt', $first)
+                    && $first['nextGenerationAt'] === null
                     && \array_key_exists('isRunning', $first)
                     && $first['isRunning'] === false;
             }), $context);
@@ -109,6 +111,10 @@ class ProductExportEventListenerTest extends TestCase
     {
         yield 'explicit generatedAt update' => [[
             'generatedAt' => new \DateTime(),
+        ]];
+
+        yield 'explicit nextGenerationAt update' => [[
+            'nextGenerationAt' => new \DateTime(),
         ]];
 
         yield 'explicit isRunning update' => [[
