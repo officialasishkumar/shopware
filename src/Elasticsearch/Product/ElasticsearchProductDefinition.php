@@ -70,6 +70,9 @@ class ElasticsearchProductDefinition extends AbstractElasticsearchDefinition
         $properties = [
             'id' => self::KEYWORD_FIELD,
             'name' => $languageFields,
+            'parent' => ElasticsearchFieldBuilder::nested([
+                'name' => $languageFields,
+            ]),
             'description' => $languageFields,
             'metaTitle' => $languageFields,
             'metaDescription' => $languageFields,
@@ -221,6 +224,8 @@ class ElasticsearchProductDefinition extends AbstractElasticsearchDefinition
 
             $names = ElasticsearchFieldMapper::translated(field: 'name', items: $translation);
             $names = $this->fillFallbackTranslation($languageMapping, $names);
+            $parentNames = ElasticsearchFieldMapper::translated(field: 'parentName', items: $translation);
+            $parentNames = $this->fillFallbackTranslation($languageMapping, $parentNames);
 
             $customFields = $this->mapCustomFields(
                 variantCustomFields: ElasticsearchFieldMapper::translated(field: 'customFields', items: $translation, stripText: false),
@@ -322,6 +327,13 @@ class ElasticsearchProductDefinition extends AbstractElasticsearchDefinition
                 'states' => ElasticsearchIndexingUtils::parseJson($item, 'states'),
                 'customFields' => $customFields,
                 'name' => $names,
+                ...($item['parentId'] !== null ? [
+                    'parent' => [
+                        'id' => $item['parentId'],
+                        '_count' => 1,
+                        'name' => $parentNames,
+                    ],
+                ] : []),
                 'description' => ElasticsearchFieldMapper::translated(field: 'description', items: $translation),
                 'metaTitle' => ElasticsearchFieldMapper::translated(field: 'metaTitle', items: $translation),
                 'metaDescription' => ElasticsearchFieldMapper::translated(field: 'metaDescription', items: $translation),
@@ -490,6 +502,7 @@ SQL;
 SELECT
     LOWER(HEX(p.id)) AS id,
     IFNULL(product_main.name, product_parent.name) AS name,
+    product_parent.name AS parentName,
     IFNULL(product_main.description, product_parent.description) AS description,
     IFNULL(product_main.meta_title, product_parent.meta_title) AS metaTitle,
     IFNULL(product_main.meta_description, product_parent.meta_description) AS metaDescription,
