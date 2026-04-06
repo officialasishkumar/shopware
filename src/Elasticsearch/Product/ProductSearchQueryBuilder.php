@@ -61,8 +61,6 @@ class ProductSearchQueryBuilder extends AbstractProductSearchQueryBuilder
                 (bool) $item['and_logic'],
             );
         }, $searchConfig);
-        $configs = ParentNameSearchFieldConfigExpander::extend($this->productDefinition->getEntityName(), $configs);
-
         if (!$configs[0]->isAndLogic()) {
             $tokens = [$originalTerm];
         }

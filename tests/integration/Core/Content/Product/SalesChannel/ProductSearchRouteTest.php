@@ -414,6 +414,16 @@ class ProductSearchRouteTest extends TestCase
         ];
 
         $productRepository->create($products, Context::createDefaultContext());
+        $productRepository->update([
+            [
+                'id' => $ids->get('parent-variant-name'),
+                'variantListingConfig' => [
+                    'displayParent' => true,
+                    'mainVariantId' => null,
+                    'configuratorGroupConfig' => [],
+                ],
+            ],
+        ], Context::createDefaultContext());
         $this->searchKeywordUpdater->update([
             $ids->get('parent-variant-name'),
             $ids->get('parent-variant-name.1'),

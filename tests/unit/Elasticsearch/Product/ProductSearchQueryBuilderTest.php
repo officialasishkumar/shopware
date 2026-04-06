@@ -150,6 +150,7 @@ class ProductSearchQueryBuilderTest extends TestCase
             'config' => [
                 self::config(field: 'name', ranking: 1000, tokenize: true, and: false),
                 self::config(field: 'tags.name', ranking: 500, tokenize: true, and: false),
+                self::config(field: 'parent.name', ranking: 800, tokenize: true, and: false),
             ],
             'term' => 'foo',
             'expected' => self::bool([
@@ -185,6 +186,7 @@ class ProductSearchQueryBuilderTest extends TestCase
                 self::config(field: 'ean', ranking: 2000),
                 self::config(field: 'restockTime', ranking: 1500),
                 self::config(field: 'tags.name', ranking: 500),
+                self::config(field: 'parent.name', ranking: 800),
             ],
             'term' => 'foo 2023',
             'expected' => self::disMax([
@@ -325,6 +327,7 @@ class ProductSearchQueryBuilderTest extends TestCase
                 self::config(field: 'name', ranking: 1000, tokenize: true, and: false),
                 self::config(field: 'tags.name', ranking: 500, tokenize: true, and: false),
                 self::config(field: 'categories.name', ranking: 200, tokenize: true, and: false),
+                self::config(field: 'parent.name', ranking: 800, tokenize: true, and: false),
             ],
             'term' => 'foo',
             'expected' => self::bool([
@@ -364,6 +367,7 @@ class ProductSearchQueryBuilderTest extends TestCase
                 self::config(field: 'ean', ranking: 2000),
                 self::config(field: 'restockTime', ranking: 1500),
                 self::config(field: 'tags.name', ranking: 500),
+                self::config(field: 'parent.name', ranking: 800),
             ],
             'term' => 'foo 2023',
             'expected' => self::disMax([
@@ -515,10 +519,11 @@ class ProductSearchQueryBuilderTest extends TestCase
         $builder->getDecorated();
     }
 
-    public function testBuildIncludesParentNameForProductSearch(): void
+    public function testBuildIncludesParentNameWhenConfigured(): void
     {
         $builder = $this->getBuilder([
             self::config(field: 'name', ranking: 1000, tokenize: true, and: false),
+            self::config(field: 'parent.name', ranking: 800, tokenize: true, and: false),
         ]);
 
         $criteria = new Criteria();

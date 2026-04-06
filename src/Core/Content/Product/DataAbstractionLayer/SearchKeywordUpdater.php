@@ -36,10 +36,6 @@ use Symfony\Contracts\Service\ResetInterface;
 #[Package('framework')]
 class SearchKeywordUpdater implements ResetInterface
 {
-    private const PARENT_NAME_FIELD = 'parent.name';
-
-    private const PARENT_NAME_RANKING_FACTOR = 0.8;
-
     /**
      * @var array<string, array<int, ConfigField>>
      */
@@ -108,7 +104,7 @@ class SearchKeywordUpdater implements ResetInterface
      */
     private function updateLanguage(array $ids, Context $context, array $existingProducts): array
     {
-        $configFields = $this->extendConfigFieldsWithParentName($this->getConfigFields($context->getLanguageId()));
+        $configFields = $this->getConfigFields($context->getLanguageId());
 
         $versionId = Uuid::fromHexToBytes($context->getVersionId());
         $languageId = Uuid::fromHexToBytes($context->getLanguageId());
@@ -159,36 +155,6 @@ class SearchKeywordUpdater implements ResetInterface
         $this->insertDictionary($dictionary);
 
         return $existingProducts;
-    }
-
-    /**
-     * @param array<int, ConfigField> $configFields
-     *
-     * @return array<int, ConfigField>
-     */
-    private function extendConfigFieldsWithParentName(array $configFields): array
-    {
-        foreach ($configFields as $configField) {
-            if ($configField['field'] === self::PARENT_NAME_FIELD) {
-                return $configFields;
-            }
-        }
-
-        foreach ($configFields as $configField) {
-            if ($configField['field'] !== 'name') {
-                continue;
-            }
-
-            $configFields[] = [
-                ...$configField,
-                'field' => self::PARENT_NAME_FIELD,
-                'ranking' => (string) round((float) $configField['ranking'] * self::PARENT_NAME_RANKING_FACTOR, 5),
-            ];
-
-            break;
-        }
-
-        return $configFields;
     }
 
     /**

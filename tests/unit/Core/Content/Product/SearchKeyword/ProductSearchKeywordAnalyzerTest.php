@@ -364,7 +364,7 @@ class ProductSearchKeywordAnalyzerTest extends TestCase
             [
                 'field' => 'parent.name',
                 'tokenize' => true,
-                'ranking' => 100,
+                'ranking' => 80,
             ],
         ]);
 
@@ -372,6 +372,14 @@ class ProductSearchKeywordAnalyzerTest extends TestCase
             ['child', 'child product', 'parent', 'parent product', 'product'],
             $keywords->getKeys()
         );
+
+        $childKeyword = $keywords->get('child');
+        $parentKeyword = $keywords->get('parent');
+
+        static::assertNotNull($childKeyword);
+        static::assertNotNull($parentKeyword);
+        static::assertSame(100.0, $childKeyword->getRanking());
+        static::assertSame(80.0, $parentKeyword->getRanking());
     }
 
     private static function getLongTextDescription(): string
