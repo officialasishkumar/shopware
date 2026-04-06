@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\ProductExport\Service;
 
 use Doctrine\DBAL\Connection;
 use Monolog\Level;
+use Shopware\Core\Content\Category\Service\CategoryBreadcrumbBuilder;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductCollection;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
@@ -59,6 +60,7 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
         private readonly SeoUrlPlaceholderHandlerInterface $seoUrlPlaceholderHandler,
         Environment $twig,
         private readonly ProductDefinition $productDefinition,
+        private readonly CategoryBreadcrumbBuilder $categoryBreadcrumbBuilder,
         private readonly LanguageLocaleCodeProvider $languageLocaleProvider,
         TwigVariableParserFactory $parserFactory
     ) {
@@ -105,7 +107,9 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
             $context->getContext()
         );
 
-        $associations = $this->getAssociations($productExport, $context);
+        $templateVariables = $this->getTemplateVariables($productExport, $context);
+        $associations = $this->getAssociations($templateVariables);
+        $templateUsesSeoCategory = $this->templateUsesSeoCategory($templateVariables);
 
         $criteria = new Criteria();
         $criteria
@@ -116,6 +120,10 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
 
         foreach ($associations as $association) {
             $criteria->addAssociation($association);
+        }
+
+        if ($templateUsesSeoCategory && !\in_array('mainCategories.category', $associations, true)) {
+            $criteria->addAssociation('mainCategories.category');
         }
 
         $this->eventDispatcher->dispatch(
@@ -158,19 +166,23 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
         );
 
         if ($productExport->getFileFormat() === ProductExportEntity::FILE_FORMAT_JSONL) {
-            $content .= $this->generateJsonlBody($iterator, $productExport, $context, $productContext->getContext(), $exportBehavior);
+            $content .= $this->generateJsonlBody($iterator, $productExport, $context, $productContext->getContext(), $exportBehavior, $templateUsesSeoCategory);
         } else {
             while ($productResult = $iterator->fetch()) {
                 foreach ($productResult->getEntities() as $product) {
-                    $data = $productContext->getContext();
-                    $data['product'] = $product;
-
                     if ($productExport->isIncludeVariants() && !$product->getParentId() && $product->getChildCount() > 0) {
                         continue; // Skip main product if variants are included
                     }
                     if (!$productExport->isIncludeVariants() && $product->getParentId()) {
                         continue; // Skip variants unless they are included
                     }
+
+                    if ($templateUsesSeoCategory) {
+                        $this->hydrateSeoCategory($product, $context);
+                    }
+
+                    $data = $productContext->getContext();
+                    $data['product'] = $product;
 
                     $renderedBody = $this->renderProductBody($productExport, $context, $data);
 
@@ -223,7 +235,8 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
         ProductExportEntity $productExport,
         SalesChannelContext $context,
         array $baseContext,
-        ExportBehavior $exportBehavior
+        ExportBehavior $exportBehavior,
+        bool $templateUsesSeoCategory
     ): string {
         $content = '';
 
@@ -236,6 +249,10 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
                 }
                 if (!$productExport->isIncludeVariants() && $product->getParentId()) {
                     continue; // Skip variants unless they are included
+                }
+
+                if ($templateUsesSeoCategory) {
+                    $this->hydrateSeoCategory($product, $context);
                 }
 
                 $data = $baseContext;
@@ -301,10 +318,26 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
     /**
      * @return array<string>
      */
-    private function getAssociations(ProductExportEntity $productExport, SalesChannelContext $context): array
+    private function getAssociations(array $variables): array
+    {
+        $associations = [];
+        foreach ($variables as $variable) {
+            $associations[] = EntityDefinitionQueryHelper::getAssociationPath($variable, $this->productDefinition);
+        }
+
+        return array_values(array_filter(array_unique($associations)));
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function getTemplateVariables(ProductExportEntity $productExport, SalesChannelContext $context): array
     {
         try {
+            /** @var array<string> $variables */
             $variables = $this->twigVariableParser->parse((string) $productExport->getBodyTemplate());
+
+            return $variables;
         } catch (\Exception $e) {
             $e = ProductExportException::renderProductException($e->getMessage());
 
@@ -314,12 +347,24 @@ class ProductExportGenerator implements ProductExportGeneratorInterface
 
             throw $e;
         }
+    }
 
-        $associations = [];
+    /**
+     * @param array<string> $variables
+     */
+    private function templateUsesSeoCategory(array $variables): bool
+    {
         foreach ($variables as $variable) {
-            $associations[] = EntityDefinitionQueryHelper::getAssociationPath($variable, $this->productDefinition);
+            if (str_starts_with($variable, 'product.seoCategory')) {
+                return true;
+            }
         }
 
-        return array_filter(array_unique($associations));
+        return false;
+    }
+
+    private function hydrateSeoCategory(SalesChannelProductEntity $product, SalesChannelContext $context): void
+    {
+        $product->setSeoCategory($this->categoryBreadcrumbBuilder->getProductSeoCategory($product, $context));
     }
 }

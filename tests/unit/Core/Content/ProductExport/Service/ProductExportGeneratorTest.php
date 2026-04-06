@@ -6,6 +6,8 @@ use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Content\Category\CategoryEntity;
+use Shopware\Core\Content\Category\Service\CategoryBreadcrumbBuilder;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductCollection;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
@@ -70,6 +72,8 @@ class ProductExportGeneratorTest extends TestCase
 
     private ProductDefinition $productDefinition;
 
+    private MockObject&CategoryBreadcrumbBuilder $categoryBreadcrumbBuilder;
+
     private MockObject&LanguageLocaleCodeProvider $languageLocaleProvider;
 
     private MockObject&TwigVariableParserFactory $parserFactory;
@@ -88,6 +92,7 @@ class ProductExportGeneratorTest extends TestCase
         $this->seoUrlPlaceholderHandler = $this->createMock(SeoUrlPlaceholderHandlerInterface::class);
         $this->twig = $this->createMock(Environment::class);
         $this->productDefinition = new ProductDefinition();
+        $this->categoryBreadcrumbBuilder = $this->createMock(CategoryBreadcrumbBuilder::class);
         $this->languageLocaleProvider = $this->createMock(LanguageLocaleCodeProvider::class);
         $this->parserFactory = $this->createMock(TwigVariableParserFactory::class);
     }
@@ -114,6 +119,7 @@ class ProductExportGeneratorTest extends TestCase
             $this->seoUrlPlaceholderHandler,
             $this->twig,
             $this->productDefinition,
+            $this->categoryBreadcrumbBuilder,
             $this->languageLocaleProvider,
             $this->parserFactory
         );
@@ -153,6 +159,7 @@ class ProductExportGeneratorTest extends TestCase
             $this->seoUrlPlaceholderHandler,
             $this->twig,
             $this->productDefinition,
+            $this->categoryBreadcrumbBuilder,
             $this->languageLocaleProvider,
             $this->parserFactory
         );
@@ -232,6 +239,32 @@ class ProductExportGeneratorTest extends TestCase
         static::assertSame("{\"url\":\"https://example.com/product/1\",\"title\":\"Product\"}\n", $result->getContent());
         static::assertSame(1, $result->getTotal());
         static::assertSame([], $result->getErrors());
+    }
+
+    public function testTemplateUsesSeoCategoryWhenSeoCategoryVariableIsPresent(): void
+    {
+        $method = new \ReflectionMethod(ProductExportGenerator::class, 'templateUsesSeoCategory');
+
+        static::assertTrue($method->invoke($this->createGenerator(), ['product.id', 'product.seoCategory.id']));
+        static::assertFalse($method->invoke($this->createGenerator(), ['product.id', 'context.currency']));
+    }
+
+    public function testHydrateSeoCategorySetsResolvedCategoryOnProduct(): void
+    {
+        $context = $this->createSalesChannelContext();
+        $product = $this->createProduct('product-id');
+        $seoCategory = new CategoryEntity();
+        $seoCategory->setId('seo-category-id');
+
+        $this->categoryBreadcrumbBuilder->expects($this->once())
+            ->method('getProductSeoCategory')
+            ->with($product, $context)
+            ->willReturn($seoCategory);
+
+        $method = new \ReflectionMethod(ProductExportGenerator::class, 'hydrateSeoCategory');
+        $method->invoke($this->createGenerator(), $product, $context);
+
+        static::assertSame($seoCategory, $product->getSeoCategory());
     }
 
     public function testGenerateThrowsExceptionForInvalidJsonlRow(): void
@@ -515,6 +548,7 @@ class ProductExportGeneratorTest extends TestCase
             $this->seoUrlPlaceholderHandler,
             $this->twig,
             $this->productDefinition,
+            $this->categoryBreadcrumbBuilder,
             $this->languageLocaleProvider,
             $this->parserFactory
         );
