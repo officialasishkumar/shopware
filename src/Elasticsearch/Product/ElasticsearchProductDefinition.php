@@ -54,6 +54,7 @@ class ElasticsearchProductDefinition extends AbstractElasticsearchDefinition
     public function getMapping(Context $context): array
     {
         $languageFields = $this->fieldBuilder->translated(self::getTextFieldConfig());
+        $technicalLanguageFields = $this->fieldBuilder->translatedTechnicalTerms(self::getTechnicalTermTextFieldConfig());
         $salesChannelByLanguage = $this->salesChannelLanguageLoader->loadLanguages();
         $allSalesChannels = array_values(array_unique(array_merge(...array_values($salesChannelByLanguage))));
 
@@ -69,11 +70,11 @@ class ElasticsearchProductDefinition extends AbstractElasticsearchDefinition
 
         $properties = [
             'id' => self::KEYWORD_FIELD,
-            'name' => $languageFields,
+            'name' => $technicalLanguageFields,
             'description' => $languageFields,
             'metaTitle' => $languageFields,
             'metaDescription' => $languageFields,
-            'customSearchKeywords' => $languageFields,
+            'customSearchKeywords' => $technicalLanguageFields,
             'categories' => ElasticsearchFieldBuilder::nested([
                 'name' => $languageFields,
             ]),
@@ -109,11 +110,11 @@ class ElasticsearchProductDefinition extends AbstractElasticsearchDefinition
             'manufacturerNumber' => self::getTextFieldConfig(),
             'deliveryTimeId' => self::KEYWORD_FIELD,
             'displayGroup' => self::KEYWORD_FIELD,
-            'ean' => self::getTextFieldConfig(),
+            'ean' => self::getTechnicalTermTextFieldConfig(),
             'height' => self::FLOAT_FIELD,
             'length' => self::FLOAT_FIELD,
             'markAsTopseller' => self::BOOLEAN_FIELD,
-            'productNumber' => self::getTextFieldConfig(),
+            'productNumber' => self::getTechnicalTermTextFieldConfig(),
             'ratingAverage' => self::FLOAT_FIELD,
             'releaseDate' => ElasticsearchFieldBuilder::datetime(),
             'createdAt' => ElasticsearchFieldBuilder::datetime(),

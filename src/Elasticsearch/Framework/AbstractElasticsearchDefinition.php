@@ -31,6 +31,17 @@ abstract class AbstractElasticsearchDefinition
         ],
     ];
 
+    final public const TECHNICAL_TERM_SEARCH_FIELD = [
+        'fields' => [
+            'search' => [
+                'type' => 'text',
+                'analyzer' => 'sw_whitespace_word_delimiter_index_analyzer',
+                'search_analyzer' => 'sw_whitespace_word_delimiter_search_analyzer',
+            ],
+            'ngram' => ['type' => 'text', 'analyzer' => 'sw_ngram_analyzer'],
+        ],
+    ];
+
     abstract public function getEntityDefinition(): EntityDefinition;
 
     /**
@@ -64,5 +75,13 @@ abstract class AbstractElasticsearchDefinition
     protected static function getTextFieldConfig(): array
     {
         return self::KEYWORD_FIELD + self::SEARCH_FIELD;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected static function getTechnicalTermTextFieldConfig(): array
+    {
+        return self::KEYWORD_FIELD + self::TECHNICAL_TERM_SEARCH_FIELD;
     }
 }
