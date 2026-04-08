@@ -426,7 +426,6 @@ class WebhookManagerTest extends TestCase
         return new WebhookManager(
             $this->webhookLoader,
             $this->eventDispatcher,
-            $this->connection,
             $this->eventFactory,
             $this->createMock(AppLocaleProvider::class),
             $appPayloadServiceHelper,
@@ -434,7 +433,11 @@ class WebhookManagerTest extends TestCase
             $this->bus,
             'https://example.com',
             '0.0.0',
-            $isAdminWorkerEnabled
+            $isAdminWorkerEnabled,
+            $this->createConfiguredMock(\Shopware\Core\Framework\Webhook\Outbox\OutboxEventRepository::class, [
+                'ensureOutboxEntry' => new \Shopware\Core\Framework\Webhook\Outbox\OutboxInsertResult(true, 1),
+            ]),
+            new \Symfony\Component\Clock\MockClock(),
         );
     }
 

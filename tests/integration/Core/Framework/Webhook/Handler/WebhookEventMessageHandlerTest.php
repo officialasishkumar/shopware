@@ -340,7 +340,9 @@ class WebhookEventMessageHandlerTest extends TestCase
         $webhookEventLog = $webhookEventLogRepository->search(new Criteria([$webhookEventId]), Context::createDefaultContext())->first();
 
         static::assertInstanceOf(WebhookEventLogEntity::class, $webhookEventLog);
-        static::assertSame($webhookEventLog->getDeliveryStatus(), WebhookEventLogDefinition::STATUS_QUEUED);
+        // Handler transitions to RUNNING via markRunning and records diagnostics via recordDeliveryResponse,
+        // but does not set STATUS_FAILED — that is RetryWebhookMessageFailedSubscriber's responsibility.
+        static::assertSame($webhookEventLog->getDeliveryStatus(), WebhookEventLogDefinition::STATUS_RUNNING);
         static::assertSame($webhookEventLog->getResponseStatusCode(), 500);
         static::assertEquals($webhookEventLog->getResponseContent(), [
             'headers' => [],
@@ -389,6 +391,67 @@ class WebhookEventMessageHandlerTest extends TestCase
         $this->expectExceptionMessage('Connection refused');
 
         ($this->webhookEventMessageHandler)($webhookEventMessage);
+    }
+
+    public function testSkipsDeliveryWhenEventLogIsInTerminalState(): void
+    {
+        $webhookId = Uuid::randomHex();
+        $appId = Uuid::randomHex();
+
+        $appRepository = static::getContainer()->get('app.repository');
+        $appRepository->create([[
+            'id' => $appId,
+            'name' => 'SwagApp',
+            'active' => true,
+            'path' => __DIR__ . '/Manifest/_fixtures/test',
+            'version' => '0.0.1',
+            'label' => 'test',
+            'appSecret' => 's3cr3t',
+            'integration' => [
+                'label' => 'test',
+                'accessKey' => 'api access key',
+                'secretAccessKey' => 'test',
+            ],
+            'aclRole' => [
+                'name' => 'SwagApp',
+            ],
+            'webhooks' => [
+                [
+                    'id' => $webhookId,
+                    'name' => 'hook1',
+                    'eventName' => 'order',
+                    'url' => 'https://test.com',
+                ],
+            ],
+        ]], Context::createDefaultContext());
+
+        $webhookEventLogRepository = static::getContainer()->get('webhook_event_log.repository');
+        $webhookEventId = Uuid::randomHex();
+        $webhookEventMessage = $this->createWebhookEventMessage($webhookEventId, $appId, $webhookId);
+
+        // Create event log in SUCCESS state (terminal) — simulates a redelivered message
+        $webhookEventLogRepository->create([[
+            'id' => $webhookEventId,
+            'appName' => 'SwagApp',
+            'deliveryStatus' => WebhookEventLogDefinition::STATUS_SUCCESS,
+            'webhookName' => 'hook1',
+            'eventName' => 'order',
+            'appVersion' => '0.0.1',
+            'url' => 'https://test.com',
+            'serializedWebhookMessage' => serialize($webhookEventMessage),
+        ]], Context::createDefaultContext());
+
+        $requestCountBefore = $this->getRequestCount();
+
+        ($this->webhookEventMessageHandler)($webhookEventMessage);
+
+        // Handler returned early — no new HTTP request was made
+        static::assertSame($requestCountBefore, $this->getRequestCount());
+
+        // Event log status unchanged
+        $webhookEventLog = $webhookEventLogRepository->search(new Criteria([$webhookEventId]), Context::createDefaultContext())->first();
+        static::assertInstanceOf(WebhookEventLogEntity::class, $webhookEventLog);
+        static::assertSame(WebhookEventLogDefinition::STATUS_SUCCESS, $webhookEventLog->getDeliveryStatus());
     }
 
     /**

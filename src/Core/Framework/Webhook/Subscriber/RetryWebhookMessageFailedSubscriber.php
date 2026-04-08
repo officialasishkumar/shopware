@@ -2,12 +2,10 @@
 
 namespace Shopware\Core\Framework\Webhook\Subscriber;
 
-use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Uuid\Uuid;
-use Shopware\Core\Framework\Webhook\EventLog\WebhookEventLogDefinition;
 use Shopware\Core\Framework\Webhook\Message\WebhookEventMessage;
+use Shopware\Core\Framework\Webhook\Outbox\OutboxEventRepository;
 use Shopware\Core\Framework\Webhook\Service\RelatedWebhooks;
 use Shopware\Core\Framework\Webhook\WebhookFailureStrategy;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -29,7 +27,7 @@ class RetryWebhookMessageFailedSubscriber implements EventSubscriberInterface
      * @internal
      */
     public function __construct(
-        private readonly Connection $connection,
+        private readonly OutboxEventRepository $outboxEventRepository,
         private readonly RelatedWebhooks $relatedWebhooks,
         string $failureStrategy = WebhookFailureStrategy::DisableOnThreshold->value,
     ) {
@@ -45,36 +43,33 @@ class RetryWebhookMessageFailedSubscriber implements EventSubscriberInterface
 
     public function failed(WorkerMessageFailedEvent $event): void
     {
-        if ($event->willRetry()) {
-            return;
-        }
-
         $message = $event->getEnvelope()->getMessage();
         if (!$message instanceof WebhookEventMessage) {
             return;
         }
 
-        $webhookId = $message->getWebhookId();
-        $webhookEventLogId = $message->getWebhookEventId();
+        if ($event->willRetry()) {
+            // Transition RUNNING → PENDING_RETRY so the next markRunning() call can claim it.
+            // Without this, the delivery row stays in RUNNING and all subsequent retries are blocked.
+            $this->outboxEventRepository->markPendingRetry($message->getWebhookEventId());
 
-        $context = Context::createDefaultContext();
+            return;
+        }
 
-        $this->connection->executeStatement('UPDATE webhook_event_log SET delivery_status = :status WHERE id = :id', [
-            'status' => WebhookEventLogDefinition::STATUS_FAILED,
-            'id' => Uuid::fromHexToBytes($webhookEventLogId),
-        ]);
+        $this->outboxEventRepository->markFailed($message->getWebhookEventId());
 
-        $rows = $this->connection->fetchAllAssociative(
-            'SELECT active, error_count FROM webhook WHERE id = :id',
-            ['id' => Uuid::fromHexToBytes($webhookId)]
-        );
+        $this->applyFailureStrategy($message->getWebhookId());
+    }
 
-        /** @var array{active: int, error_count: int} $webhook */
-        $webhook = current($rows);
+    private function applyFailureStrategy(string $webhookId): void
+    {
+        $webhook = $this->relatedWebhooks->getWebhookState($webhookId);
 
         if (!\is_array($webhook) || !$webhook['active']) {
             return;
         }
+
+        $context = Context::createDefaultContext();
 
         $params = match ($this->failureStrategy) {
             WebhookFailureStrategy::DisableOnThreshold => $this->handleDisableOnThreshold($webhook),

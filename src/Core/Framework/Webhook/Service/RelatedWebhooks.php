@@ -22,6 +22,20 @@ class RelatedWebhooks
     }
 
     /**
+     * Returns the active/error_count state for the given webhook, or false if not found.
+     *
+     * @return array{active: int, error_count: int}|false
+     */
+    public function getWebhookState(string $webhookId): array|false
+    {
+        /** @var array{active: int, error_count: int}|false */
+        return $this->connection->fetchAssociative(
+            'SELECT active, error_count FROM webhook WHERE id = :id',
+            ['id' => Uuid::fromHexToBytes($webhookId)]
+        );
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public function updateRelated(string $webhookId, array $data, Context $context): void

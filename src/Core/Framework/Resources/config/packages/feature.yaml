@@ -81,3 +81,8 @@ shopware:
         major: true
         toggleable: true
         description: "Replace inline microdata (itemscope/itemprop) with JSON-LD structured data in the Storefront. When enabled, legacy microdata attributes are removed and a <script type=\"application/ld+json\"> block is injected into the <head> instead."
+      - name: WEBHOOK_TRANSPORT_REWORK
+        default: false
+        major: true
+        toggleable: true
+        description: "Dedicated webhook transport with outbox-first persistence, per-webhook failure isolation, and structured retry"

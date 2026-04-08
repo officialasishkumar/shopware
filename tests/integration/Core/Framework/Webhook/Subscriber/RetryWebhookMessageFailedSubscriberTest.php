@@ -2,7 +2,6 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\Webhook\Subscriber;
 
-use Doctrine\DBAL\Connection;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
@@ -18,6 +17,7 @@ use Shopware\Core\Framework\Webhook\EventLog\WebhookEventLogDefinition;
 use Shopware\Core\Framework\Webhook\Message\WebhookEventMessage;
 use Shopware\Core\Framework\Webhook\Service\RelatedWebhooks;
 use Shopware\Core\Framework\Webhook\Subscriber\RetryWebhookMessageFailedSubscriber;
+use Shopware\Core\Framework\Webhook\Outbox\OutboxEventRepository;
 use Shopware\Core\Framework\Webhook\WebhookEntity;
 use Shopware\Core\Framework\Webhook\WebhookFailureStrategy;
 use Shopware\Tests\Integration\Core\Framework\App\GuzzleTestClientBehaviour;
@@ -241,7 +241,7 @@ class RetryWebhookMessageFailedSubscriberTest extends TestCase
         );
 
         $subscriber = new RetryWebhookMessageFailedSubscriber(
-            static::getContainer()->get(Connection::class),
+            static::getContainer()->get(OutboxEventRepository::class),
             static::getContainer()->get(RelatedWebhooks::class),
             WebhookFailureStrategy::Ignore->value
         );
@@ -260,6 +260,80 @@ class RetryWebhookMessageFailedSubscriberTest extends TestCase
         static::assertInstanceOf(WebhookEntity::class, $webhook);
         static::assertSame(10, $webhook->getErrorCount());
         static::assertTrue($webhook->isActive());
+    }
+
+    public function testWillRetryTransitionsToStatusPendingRetry(): void
+    {
+        $webhookId = Uuid::randomHex();
+        $appId = Uuid::randomHex();
+        $webhookEventId = Uuid::randomHex();
+
+        $appRepository = static::getContainer()->get('app.repository');
+        /** @var EntityRepository<WebhookEventLogCollection> $webhookEventLogRepository */
+        $webhookEventLogRepository = static::getContainer()->get('webhook_event_log.repository');
+
+        $appRepository->create([[
+            'id' => $appId,
+            'name' => 'SwagApp',
+            'active' => true,
+            'path' => __DIR__ . '/Manifest/_fixtures/test',
+            'version' => '0.0.1',
+            'label' => 'test',
+            'appSecret' => 's3cr3t',
+            'integration' => [
+                'label' => 'test',
+                'accessKey' => 'api access key',
+                'secretAccessKey' => 'test',
+            ],
+            'aclRole' => [
+                'name' => 'SwagApp',
+            ],
+            'webhooks' => [
+                [
+                    'id' => $webhookId,
+                    'name' => 'hook1',
+                    'eventName' => 'order',
+                    'url' => 'https://test.com',
+                ],
+            ],
+        ]], $this->context);
+
+        $webhookEventMessage = $this->createWebhookEventMessage($webhookEventId, $appId, $webhookId);
+
+        // Create event log in RUNNING state (handler already called markRunning)
+        $webhookEventLogRepository->create([[
+            'id' => $webhookEventId,
+            'appName' => 'SwagApp',
+            'deliveryStatus' => WebhookEventLogDefinition::STATUS_RUNNING,
+            'webhookName' => 'hook1',
+            'eventName' => 'order',
+            'appVersion' => '0.0.1',
+            'url' => 'https://test.com',
+            'serializedWebhookMessage' => serialize($webhookEventMessage),
+        ]], $this->context);
+
+        // willRetry = true — Symfony will retry this message
+        $event = new WorkerMessageFailedEvent(
+            new Envelope($webhookEventMessage),
+            'async',
+            new ClientException('test', new Request('GET', 'https://test.com'), new Response(500))
+        );
+        $event->setForRetry();
+
+        static::getContainer()->get(RetryWebhookMessageFailedSubscriber::class)
+            ->failed($event);
+
+        $webhookEventLog = $webhookEventLogRepository->search(new Criteria([$webhookEventId]), $this->context)
+            ->getEntities()
+            ->first();
+        static::assertNotNull($webhookEventLog);
+        static::assertSame(WebhookEventLogDefinition::STATUS_PENDING_RETRY, $webhookEventLog->getDeliveryStatus());
+
+        // Failure strategy should NOT be applied on retryable failures — error_count stays 0
+        $webhookRepository = static::getContainer()->get('webhook.repository');
+        $webhook = $webhookRepository->search(new Criteria([$webhookId]), $this->context)->first();
+        static::assertInstanceOf(WebhookEntity::class, $webhook);
+        static::assertSame(0, $webhook->getErrorCount());
     }
 
     private function createWebhookEventMessage(string $webhookEventId, string $appId, string $webhookId): WebhookEventMessage

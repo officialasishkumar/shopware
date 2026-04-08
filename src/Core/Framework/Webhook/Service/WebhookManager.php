@@ -2,7 +2,7 @@
 
 namespace Shopware\Core\Framework\Webhook\Service;
 
-use Doctrine\DBAL\Connection;
+use Psr\Clock\ClockInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\App\AppLocaleProvider;
@@ -19,11 +19,11 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Framework\Webhook\AclPrivilegeCollection;
 use Shopware\Core\Framework\Webhook\Event\PreWebhooksDispatchEvent;
-use Shopware\Core\Framework\Webhook\EventLog\WebhookEventLogDefinition;
 use Shopware\Core\Framework\Webhook\Hookable;
 use Shopware\Core\Framework\Webhook\Hookable\HookableEntityWrittenEvent;
 use Shopware\Core\Framework\Webhook\Hookable\HookableEventFactory;
 use Shopware\Core\Framework\Webhook\Message\WebhookEventMessage;
+use Shopware\Core\Framework\Webhook\Outbox\OutboxEventRepository;
 use Shopware\Core\Framework\Webhook\Webhook;
 use Shopware\Core\Profiling\Profiler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -48,7 +48,6 @@ class WebhookManager implements ResetInterface
     public function __construct(
         private readonly WebhookLoader $webhookLoader,
         private readonly EventDispatcherInterface $eventDispatcher,
-        private readonly Connection $connection,
         private readonly HookableEventFactory $eventFactory,
         private readonly AppLocaleProvider $appLocaleProvider,
         private readonly AppPayloadServiceHelper $appPayloadServiceHelper,
@@ -57,6 +56,8 @@ class WebhookManager implements ResetInterface
         private readonly string $shopUrl,
         private readonly string $shopwareVersion,
         private readonly bool $isAdminWorkerEnabled,
+        private readonly OutboxEventRepository $outboxEventRepository,
+        private readonly ClockInterface $clock,
     ) {
     }
 
@@ -136,31 +137,21 @@ class WebhookManager implements ResetInterface
                 continue;
             }
 
-            $this->logWebhookWithEvent($webhook, $message);
-            $this->bus->dispatch($message);
+            $this->outboxEventRepository->ensureOutboxEntry($message);
+
+            try {
+                $this->bus->dispatch($message);
+            } catch (\Throwable) {
+                // If queue dispatch fails, clean up the delivery row so it doesn't stay orphaned in QUEUED state.
+                $this->outboxEventRepository->markFailed($message->getWebhookEventId());
+            }
         }
     }
 
-    private function logWebhookWithEvent(Webhook $webhook, WebhookEventMessage $webhookEventMessage): void
-    {
-        $this->connection->insert(
-            'webhook_event_log',
-            [
-                'id' => Uuid::fromHexToBytes($webhookEventMessage->getWebhookEventId()),
-                'app_name' => $webhook->appName,
-                'delivery_status' => WebhookEventLogDefinition::STATUS_QUEUED,
-                'webhook_name' => $webhook->webhookName,
-                'event_name' => $webhook->eventName,
-                'app_version' => $webhook->appVersion,
-                'url' => $webhook->url,
-                'only_live_version' => (int) $webhook->onlyLiveVersion,
-                'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                'serialized_webhook_message' => serialize($webhookEventMessage),
-            ]
-        );
-    }
-
     /**
+     * Synchronous delivery via Guzzle Pool (parallel HTTP).
+     * Used in admin worker mode and for app lifecycle events.
+     *
      * @param array<Webhook> $webhooksForEvent
      */
     private function callWebhooksSynchronous(
@@ -170,9 +161,16 @@ class WebhookManager implements ResetInterface
         string $userLocale
     ): void {
         $requests = [];
+
         foreach ($webhooksForEvent as $webhook) {
             $message = $this->createWebhookMessage($webhook, $event, $languageId, $userLocale);
-            if ($message !== null) {
+            if ($message === null) {
+                continue;
+            }
+
+            $this->outboxEventRepository->ensureOutboxEntry($message);
+
+            try {
                 $requests[$message->getWebhookEventId()] = $this->appPayloadServiceHelper->createWebhookRequest(
                     $message->getPayload(),
                     $message->getUrl(),
@@ -184,10 +182,41 @@ class WebhookManager implements ResetInterface
                     $message->getUserLocale(),
                     $message->getWebhookHeaders(),
                 );
+            } catch (\Throwable) {
+                $this->outboxEventRepository->markFailed($message->getWebhookEventId());
             }
         }
 
-        $this->webhookClient->sendBatch($requests);
+        $results = $this->webhookClient->sendBatch($requests);
+        $now = $this->clock->now()->getTimestamp();
+
+        foreach ($results as $eventId => $result) {
+            $request = $requests[$eventId];
+            $processingTime = $now - $request->timestamp;
+
+            if ($result->successful()) {
+                $this->outboxEventRepository->markSuccess(
+                    $eventId,
+                    $processingTime,
+                    ['headers' => $request->headers, 'body' => $request->body],
+                    ['headers' => $result->headers, 'body' => $result->body],
+                    $result->statusCode,
+                    $result->reasonPhrase,
+                );
+            } else {
+                // Sync path (admin worker / app lifecycle) has no retry mechanism — failures are terminal.
+                // Store diagnostics first so operators can see why the delivery failed.
+                $this->outboxEventRepository->recordDeliveryResponse(
+                    $eventId,
+                    $processingTime,
+                    ['headers' => $request->headers, 'body' => $request->body],
+                    $result->hasResponse() ? ['headers' => $result->headers, 'body' => $result->body] : null,
+                    $result->statusCode,
+                    $result->reasonPhrase,
+                );
+                $this->outboxEventRepository->markFailed($eventId);
+            }
+        }
     }
 
     private function createWebhookMessage(
@@ -221,7 +250,8 @@ class WebhookManager implements ResetInterface
             $webhook->appSecret,
             $languageId,
             $userLocale,
-            $webhookHeaders
+            $webhookHeaders,
+            $webhook->appName,
         );
     }
 

@@ -80,6 +80,8 @@ framework:
                     delay: 1000
                     multiplier: 2
                     max_delay: 0
+            webhook:
+                dsn: 'shopware-webhook://default'
         buses:
             messenger.bus.default:
                 middleware:
