@@ -13,6 +13,11 @@ The login and OAuth token endpoints now support optional per user (`login_user`,
 ### "Find best variant setting" is now applied for storefront filtering
 
 Users can now control which representative of variant products is shown in filtered listings via the Product settings "Preview best matching variant in search results and filtered listings".
+### Parent product names can now be configured separately for product search
+
+The new `parent.name` search field is now added to the product search configuration so parent product names can be ranked independently from the variant's own `name`.
+
+The field is disabled by default. If you want variants to be found by their parent product name, enable `parent.name` in the product search configuration and adjust its ranking there.
 
 ## Administration
 
