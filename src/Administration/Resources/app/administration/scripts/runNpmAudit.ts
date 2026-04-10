@@ -28,5 +28,6 @@ runNpmAudit({
         'https://github.com/advisories/GHSA-qpx9-hpmf-5gmw', // underscore unlimited recursion DoS, high severity, devDep only, no fix available in 1.x
         'https://github.com/advisories/GHSA-chqc-8p9q-pq6q', // basic-ftp basic-ftp has FTP Command Injection via CRLF, high severity
         'https://github.com/advisories/GHSA-qj83-cq47-w5f8', // axios update to 1.15.0
+        'https://github.com/advisories/GHSA-3p68-rc4w-qgx5', // axios NO_PROXY SSRF bypass, critical severity, direct dep axios@0.30.3 intentionally kept at v0 (separate from axios-v1), cannot override
     ],
 });
