@@ -30,7 +30,10 @@ describe('src/app/init/telemetry.init.ts', () => {
     });
 
     it('tracks the event with data and resolved source', () => {
-        handler({ event: 'button_clicked', data: { sw_element_id: 'save' } }, { _event_: { origin: 'http://my-plugin.example.com' } });
+        handler(
+            { event: 'button_clicked', data: { sw_element_id: 'save' } },
+            { _event_: { origin: 'http://my-plugin.example.com' } },
+        );
 
         expect(trackSpy).toHaveBeenCalledWith({
             eventName: 'button_clicked',
