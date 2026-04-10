@@ -395,10 +395,9 @@ class AuthController extends StorefrontController
     )]
     public function convertForm(SalesChannelContext $context): Response
     {
-        /** @var CustomerEntity $customer */
         $customer = $context->getCustomer();
 
-        if (!$customer->getGuest()) {
+        if ($customer === null || !$customer->getGuest()) {
             return $this->redirectToRoute('frontend.account.home.page');
         }
 
@@ -417,10 +416,9 @@ class AuthController extends StorefrontController
     )]
     public function convert(RequestDataBag $request, SalesChannelContext $context): Response
     {
-        /** @var CustomerEntity $customer */
         $customer = $context->getCustomer();
 
-        if (!$customer->getGuest()) {
+        if ($customer === null || !$customer->getGuest()) {
             return $this->redirectToRoute('frontend.account.home.page');
         }
 
