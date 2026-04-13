@@ -9,6 +9,9 @@ use Shopware\Core\Content\Product\SearchKeyword\ProductSearchBuilder;
 use Shopware\Core\Content\Product\SearchKeyword\ProductSearchTermInterpreterInterface;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Query\ScoreQuery;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\SearchPattern;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\SearchTerm;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -75,5 +78,47 @@ class ProductSearchBuilderTest extends TestCase
             ->method('interpret')
             ->with('This search term\'s l', static::isInstanceOf(Context::class));
         $searchBuilder->build($request, $criteria, $mockSalesChannelContext);
+    }
+
+    public function testAndSearchAddsFallbackScoreQueriesForTokenGroups(): void
+    {
+        $pattern = new SearchPattern(new SearchTerm('elina seife 100g'));
+        $pattern->setBooleanClause(true);
+        $pattern->setTokenTerms([
+            ['elina'],
+            ['seife'],
+            ['100g'],
+        ]);
+
+        $termInterpreter = $this->createMock(ProductSearchTermInterpreterInterface::class);
+        $logger = $this->createMock(LoggerInterface::class);
+        $searchBuilder = new ProductSearchBuilder(
+            $termInterpreter,
+            $logger,
+            20
+        );
+
+        $context = Context::createDefaultContext();
+        $mockSalesChannelContext = $this->createMock(SalesChannelContext::class);
+        $mockSalesChannelContext->method('getContext')->willReturn($context);
+        $mockSalesChannelContext->method('getLanguageId')->willReturn($context->getLanguageId());
+
+        $criteria = new Criteria();
+        $request = new Request();
+        $request->query->set('search', 'elina seife 100g');
+
+        $termInterpreter->expects($this->once())
+            ->method('interpret')
+            ->with('elina seife 100g', static::isInstanceOf(Context::class))
+            ->willReturn($pattern);
+
+        $searchBuilder->build($request, $criteria, $mockSalesChannelContext);
+
+        $fallbackQueries = array_values(array_filter(
+            $criteria->getQueries(),
+            static fn (ScoreQuery $query): bool => $query->getScore() === 0.001
+        ));
+
+        static::assertCount(3, $fallbackQueries);
     }
 }

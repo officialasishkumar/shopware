@@ -19,6 +19,8 @@ use Symfony\Component\HttpFoundation\Request;
 #[Package('inventory')]
 class ProductSearchBuilder implements ProductSearchBuilderInterface
 {
+    private const TOKEN_GROUP_FALLBACK_SCORE = 0.001;
+
     /**
      * @internal
      */
@@ -93,6 +95,19 @@ class ProductSearchBuilder implements ProductSearchBuilderInterface
                 new EqualsFilter('product.searchKeywords.languageId', $context->getLanguageId()),
                 new EqualsAnyFilter('product.searchKeywords.keyword', $terms),
             ]));
+
+            // Keep products that satisfy all token groups in the result set even when the
+            // stronger interpreted keywords have been truncated for scoring.
+            $criteria->addQuery(
+                new ScoreQuery(
+                    new AndFilter([
+                        new EqualsFilter('product.searchKeywords.languageId', $context->getLanguageId()),
+                        new EqualsAnyFilter('product.searchKeywords.keyword', $terms),
+                    ]),
+                    self::TOKEN_GROUP_FALLBACK_SCORE,
+                    'product.searchKeywords.ranking'
+                )
+            );
         }
     }
 }
